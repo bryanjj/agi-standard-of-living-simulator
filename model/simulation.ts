@@ -15,10 +15,10 @@ export function simulate(scenario: Scenario, household: Household, intervention:
   const safeHousehold: Household = {
     annualIncome: Math.max(1, household.annualIncome),
     householdSize: clamp(Math.round(household.householdSize), 1, 12),
-    investments: Math.max(0, household.investments),
+    equityHoldings: Math.max(0, household.equityHoldings),
     housing: household.housing,
   };
-  const baseCapital = Math.min(safeHousehold.annualIncome * calibration.capitalIncomeCap.value, safeHousehold.investments * calibration.realInvestmentYield.value);
+  const baseCapital = Math.min(safeHousehold.annualIncome * calibration.capitalIncomeCap.value, safeHousehold.equityHoldings * calibration.realEquityIncomeYield.value);
   const baseTransferShare = Math.min(calibration.transferShareCap.value, calibration.baseTransferFloor.value + safeHousehold.householdSize * calibration.transferPerPerson.value);
   const baseTransfers = safeHousehold.annualIncome * baseTransferShare;
   const baseLabor = Math.max(0, safeHousehold.annualIncome - baseCapital - baseTransfers);

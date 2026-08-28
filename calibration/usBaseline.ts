@@ -9,9 +9,9 @@ export const calibration = {
     value: 48.15 / 55.14, provenance: 'DATA', source: 'Federal Reserve Distributional Financial Accounts, 2026 Q1', year: 2026,
     note: 'Top 10% corporate equities and mutual fund shares divided by the household total.',
   },
-  realInvestmentYield: {
+  realEquityIncomeYield: {
     value: 0.04, provenance: 'ASSUMPTION', source: 'Milestone-one model calibration',
-    note: 'Annual real income claim per dollar of financial investments.',
+    note: 'Annual real income claim per dollar of stock and stock-fund equity.',
   },
   unemploymentReplacement: {
     value: 0.1, provenance: 'ASSUMPTION', source: 'Simplified current-law fiscal proxy',

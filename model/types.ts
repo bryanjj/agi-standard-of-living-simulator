@@ -15,7 +15,7 @@ export type HousingStatus = 'rent' | 'mortgage' | 'own';
 export type Household = {
   annualIncome: number;
   householdSize: number;
-  investments: number;
+  equityHoldings: number;
   housing: HousingStatus;
 };
 

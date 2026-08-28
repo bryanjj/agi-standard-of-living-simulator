@@ -15,7 +15,7 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 
 ## What is included
 
-- Household income, size, investments, and housing inputs
+- Household income, size, stock equity, and housing inputs
 - Five source-backed U.S. income-quintile presets with a hidden manual editor
 - Four transparent policy intervention stress tests, defaulting to status quo
 - Material purchasing power normalized to Today = 100

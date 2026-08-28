@@ -8,7 +8,7 @@ import { quintilePresets } from '../calibration/quintiles';
 const household: Household = {
   annualIncome: 85_000,
   householdSize: 2,
-  investments: 120_000,
+  equityHoldings: 120_000,
   housing: 'mortgage',
 };
 
@@ -40,9 +40,14 @@ describe('simulate', () => {
     expect(final.laborIncome).toBe(0);
   });
 
-  it('pays no capital income to a household with no investments', () => {
-    const result = simulate(transformative20Year, { ...household, investments: 0 });
+  it('pays no capital income to a household with no equity holdings', () => {
+    const result = simulate(transformative20Year, { ...household, equityHoldings: 0 });
     for (const year of result.years) expect(year.capitalIncome).toBe(0);
+  });
+
+  it('does not treat the lowest quintile\'s broad financial assets as AI equity', () => {
+    expect(quintilePresets[0].household.equityHoldings).toBe(0);
+    expect(simulate(transformative20Year, quintilePresets[0].household).years[20].capitalIncome).toBe(0);
   });
 
   it('reconciles household resource shares', () => {

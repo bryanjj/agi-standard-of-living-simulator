@@ -34,7 +34,7 @@ Factor income reconciles exactly: `output × laborShare + output × capitalShare
 
 ## 3. Today's household resources
 
-Current investment income is inferred as `investments × 4%`, capped at 35% of reported household income. Baseline transfer share is `min(10%, 2% + 1% × household size)`. Labor income is the residual, so today's labor, capital, and transfer resources sum to reported household income.
+Current capital income is inferred as `stockEquity × 4%`, capped at 35% of reported household income. Stock equity is the SCF's direct and indirect equity measure; cash, transaction accounts, deposits, bonds, housing, and other non-equity assets do not receive the modeled AI-capital return. Baseline transfer share is `min(10%, 2% + 1% × household size)`. Labor income is the residual, so today's labor, capital, and transfer resources sum to reported household income.
 
 These are assumptions, not estimates from a tax microsimulation. They are deliberately visible in the UI.
 
@@ -44,7 +44,7 @@ These are assumptions, not estimates from a tax microsimulation. They are delibe
 
 `capitalIncome(t) = capitalIncome(0) × nationalCapitalIncomeIndex(t)`
 
-Because future capital income is proportional to current investment holdings, a household with zero investments receives zero capital income. No equal AI dividend is assumed.
+Because future capital income is proportional to current stock-equity holdings, a household with zero stock equity receives zero capital income. No equal AI dividend is assumed.
 
 `transfers(t) = transfers(0) + replacementRate × max(0, laborIncome(0) − laborIncome(t)) + equalDividend(t)`
 
@@ -98,6 +98,6 @@ The comparison path is `100 × 1.01^t`. The 1% rate is an assumption, not a gove
 
 The five lines represent household-income fifths. Mean current-dollar incomes come from Census Historical Income Table H-3 for 2024: $18,460, $49,380, $84,390, $136,800, and $316,100.
 
-Financial-asset means are calculated from the Federal Reserve's 2022 SCF public summary extract using survey weights and its income-percentile categories: $49,965, $63,277, $144,344, $262,069, and $1,995,509 in 2022 dollars. The fifth preset combines the SCF's 80–89.9 and 90–100 groups. Household-size proxies and modal housing tenure are calculated from the same records. Each value retains its provenance in `calibration/quintiles.ts`.
+Typical stock-equity holdings are calculated as survey-weighted medians from the Federal Reserve's 2022 SCF public summary extract using its `EQUITY` measure and income-percentile categories: $0, $0, $3,300, $22,750, and $257,050 in 2022 dollars. `EQUITY` captures direct and indirect stock holdings, including stock funds and equity held through retirement accounts. The fifth preset combines the SCF's 80–89.9 and 90–100 groups. Household-size proxies and modal housing tenure are calculated from the same records. Each value retains its provenance in `calibration/quintiles.ts`.
 
 Manual Advanced edits replace the selected quintile's household inputs while keeping its colored comparison line; selecting a quintile again restores the published preset.

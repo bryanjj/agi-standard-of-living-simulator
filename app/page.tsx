@@ -19,7 +19,7 @@ export default function Home() {
   const [interventionId, setInterventionId] = useState<InterventionId>('status-quo');
   const [income, setIncome] = useState(quintileById.q3.household.annualIncome);
   const [size, setSize] = useState(quintileById.q3.household.householdSize);
-  const [investments, setInvestments] = useState(quintileById.q3.household.investments);
+  const [equityHoldings, setEquityHoldings] = useState(quintileById.q3.household.equityHoldings);
   const [housing, setHousing] = useState<HousingStatus>(quintileById.q3.household.housing);
   const [isCustom, setIsCustom] = useState(false);
   const [focusYear, setFocusYear] = useState(20);
@@ -31,7 +31,7 @@ export default function Home() {
     setSelectedId(id);
     setIncome(household.annualIncome);
     setSize(household.householdSize);
-    setInvestments(household.investments);
+    setEquityHoldings(household.equityHoldings);
     setHousing(household.housing);
     setIsCustom(false);
   };
@@ -43,10 +43,10 @@ export default function Home() {
 
   const simulations = useMemo(() => Object.fromEntries(quintilePresets.map((preset) => {
     const household = preset.id === selectedId && isCustom
-      ? { annualIncome: income, householdSize: size, investments, housing }
+      ? { annualIncome: income, householdSize: size, equityHoldings, housing }
       : preset.household;
     return [preset.id, simulate(transformative20Year, household, intervention)];
-  })) as Record<QuintileId, ReturnType<typeof simulate>>, [selectedId, isCustom, income, size, investments, housing, intervention]);
+  })) as Record<QuintileId, ReturnType<typeof simulate>>, [selectedId, isCustom, income, size, equityHoldings, housing, intervention]);
 
   const chartData = useMemo(() => simulations.q1.years.map((year, index) => ({
     year: year.year,
@@ -88,7 +88,7 @@ export default function Home() {
         <div className="workspace quintile-workspace">
           <aside className="inputs-card quintile-card">
             <div className="section-label"><span>02</span> SELECT A HOUSEHOLD</div>
-            <p className="input-help">Choose an income quintile. The model loads average U.S. income and financial assets for that group.</p>
+            <p className="input-help">Choose an income quintile. The model loads U.S. income and typical stock-equity benchmarks for that group.</p>
             <div className="quintile-selector" role="group" aria-label="Household income quintile">
               {quintilePresets.map((preset) => (
                 <button type="button" key={preset.id} className={selectedId === preset.id ? 'active' : ''} onClick={() => selectQuintile(preset.id)} style={{ borderLeftColor: preset.color }}>
@@ -103,14 +103,15 @@ export default function Home() {
                 <label>Annual household income<div className="money-input"><span>$</span><input aria-label="Annual household income" type="number" min="1" value={income} onChange={(e) => customize(() => setIncome(Number(e.target.value)))} /></div></label>
                 <div className="paired">
                   <label>Household size<input aria-label="Household size" type="number" min="1" max="12" value={size} onChange={(e) => customize(() => setSize(Number(e.target.value)))} /></label>
-                  <label>Financial assets<div className="money-input"><span>$</span><input aria-label="Financial assets" type="number" min="0" value={investments} onChange={(e) => customize(() => setInvestments(Number(e.target.value)))} /></div></label>
+                  <label>Stock &amp; fund equity<div className="money-input"><span>$</span><input aria-label="Stock and fund equity" type="number" min="0" value={equityHoldings} onChange={(e) => customize(() => setEquityHoldings(Number(e.target.value)))} /></div></label>
                 </div>
+                <p className="input-help">Stocks and stock funds held directly or through retirement accounts. Cash, deposits, bonds, and home equity do not receive modeled AI-capital returns.</p>
                 <fieldset><legend>Housing</legend><div className="segmented">
                   {([['rent','Rent'],['mortgage','Mortgage'],['own','Own outright']] as const).map(([value, label]) => <button type="button" className={housing === value ? 'active' : ''} key={value} onClick={() => customize(() => setHousing(value))}>{label}</button>)}
                 </div></fieldset>
               </div>
             </details>
-            <p className="privacy">Presets: Census 2024 income + Fed SCF 2022 assets. Calculated locally.</p>
+            <p className="privacy">Presets: Census 2024 mean income + Fed SCF 2022 median equity. Calculated locally.</p>
           </aside>
 
           <section className="result-card comparison-card">
@@ -152,7 +153,7 @@ export default function Home() {
         <div className="explain-grid">
           <article><span>100</span><h3>Today&apos;s bundle</h3><p>Every line begins at 100: what that quintile&apos;s household can materially afford today.</p></article>
           <article><span>↑</span><h3>Above 100</h3><p>The household can command a larger equivalent bundle—even if its nominal wage falls.</p></article>
-          <article className="assumption-card"><small>SELECTED HOUSEHOLD</small><strong>{selectedPreset.label}{isCustom ? ' · customized' : ''}</strong><p>{money.format(income)} income · {compactMoney.format(investments)} financial assets · {size} people.</p></article>
+          <article className="assumption-card"><small>SELECTED HOUSEHOLD</small><strong>{selectedPreset.label}{isCustom ? ' · customized' : ''}</strong><p>{money.format(income)} income · {compactMoney.format(equityHoldings)} stock equity · {size} people.</p></article>
         </div>
       </section>
 
@@ -187,10 +188,10 @@ export default function Home() {
       </section>
 
       <section className="method-section">
-        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Every number has a label.</h2><p>Income presets use Census household quintile means. Financial assets and inferred household traits use the latest Survey of Consumer Finances. Policy interventions are transparent stress tests, not enacted proposals or forecasts.</p></div>
+        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Every number has a label.</h2><p>Income presets use Census household quintile means. Stock equity and inferred household traits use the latest Survey of Consumer Finances. Cash and other non-equity assets do not receive AI-capital returns. Policy interventions are transparent stress tests, not enacted proposals or forecasts.</p></div>
         <div className="source-list">
           <a href="https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-income-households.html" target="_blank" rel="noreferrer"><span>DATA · 2024</span><strong>U.S. Census H-3</strong><small>Mean household income by quintile ↗</small></a>
-          <a href="https://www.federalreserve.gov/econres/scfindex.htm" target="_blank" rel="noreferrer"><span>DATA · 2022</span><strong>Survey of Consumer Finances</strong><small>Mean financial assets by income group ↗</small></a>
+          <a href="https://www.federalreserve.gov/econres/scfindex.htm" target="_blank" rel="noreferrer"><span>DATA · 2022</span><strong>Survey of Consumer Finances</strong><small>Median stock equity by income group ↗</small></a>
           <a href="https://www.nber.org/papers/w32255" target="_blank" rel="noreferrer"><span>PAPER · 2024</span><strong>Korinek & Suh</strong><small>Automation, wages and the transition to AGI ↗</small></a>
           <a href="https://www.nber.org/papers/w31815" target="_blank" rel="noreferrer"><span>PAPER · 2023/2026</span><strong>Trammell & Korinek</strong><small>Growth, labor share and scarce resources ↗</small></a>
           <details><summary><span>ASSUMPTIONS</span><strong>Model & intervention calibration</strong><small>Inspect the values used here +</small></summary><ul>{Object.entries(calibration).filter(([, item]) => item.provenance === 'ASSUMPTION').map(([key, item]) => <li key={key}><b>{key.replace(/([A-Z])/g, ' $1')}</b><code>{item.value}</code><p>{item.note}</p></li>)}</ul></details>
