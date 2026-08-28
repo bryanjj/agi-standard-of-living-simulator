@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { transformative20Year } from '../scenarios/transformative20yr';
 import type { Household } from './types';
 import { simulate } from './simulation';
+import { interventions } from '../scenarios/interventions';
+import { quintilePresets } from '../calibration/quintiles';
 
 const household: Household = {
   annualIncome: 85_000,
@@ -62,5 +64,27 @@ describe('simulate', () => {
       const totalContribution = Object.values(year.decomposition).reduce((sum, value) => sum + value, 0);
       expect(100 + totalContribution).toBeCloseTo(year.standardOfLiving, 8);
     }
+  });
+
+  it('normalizes every income quintile to 100 today', () => {
+    for (const preset of quintilePresets) {
+      expect(simulate(transformative20Year, preset.household).years[0].standardOfLiving).toBeCloseTo(100, 10);
+    }
+  });
+
+  it('makes interventions explicit and leaves status quo as the default', () => {
+    const implicit = simulate(transformative20Year, household);
+    const explicit = simulate(transformative20Year, household, interventions['status-quo']);
+    expect(implicit).toEqual(explicit);
+    expect(simulate(transformative20Year, household, interventions['safety-net']).years[20].standardOfLiving)
+      .toBeGreaterThan(explicit.years[20].standardOfLiving);
+  });
+
+  it('distributes the same dollar citizen dividend to every household', () => {
+    const lowStatus = simulate(transformative20Year, quintilePresets[0].household, interventions['status-quo']).years[20];
+    const lowDividend = simulate(transformative20Year, quintilePresets[0].household, interventions['citizen-dividend']).years[20];
+    const highStatus = simulate(transformative20Year, quintilePresets[4].household, interventions['status-quo']).years[20];
+    const highDividend = simulate(transformative20Year, quintilePresets[4].household, interventions['citizen-dividend']).years[20];
+    expect(lowDividend.transfers - lowStatus.transfers).toBeCloseTo(highDividend.transfers - highStatus.transfers, 8);
   });
 });

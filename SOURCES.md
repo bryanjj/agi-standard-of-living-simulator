@@ -12,9 +12,13 @@ Every external value or qualitative target is tagged as **DATA**, **PAPER**, **A
 
 Federal Reserve Board, [Distributional Financial Accounts, 2026 Q1](https://www.federalreserve.gov/releases/z1/dataviz/dfa/compare/chart/). Corporate equities and mutual fund shares by wealth group total $55.14T; the top 10% groups hold $48.15T, or 87.3%. This supports the baseline principle that new capital income should follow current ownership rather than equal ownership.
 
+U.S. Census Bureau, [Historical Income Table H-3](https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-income-households.html), 2024. Mean current-dollar household incomes by fifth are $18,460, $49,380, $84,390, $136,800, and $316,100.
+
+Federal Reserve Board, [2022 Survey of Consumer Finances public summary extract](https://www.federalreserve.gov/econres/scfindex.htm). The simulator calculates weighted mean financial assets by the SCF's income-percentile groups. It also calculates a rounded household-size proxy and modal tenure. SCF asset amounts are in 2022 dollars; they are not silently inflated to 2024 or 2026 values.
+
 ## Assumptions
 
-All remaining values—including tax bands, benefit replacement, household income-composition inference, price pass-through, housing shares and hedges, the output curve, and the no-AGI path—are marked **ASSUMPTION** in code and listed in the UI. They are not presented as measured estimates.
+All remaining values—including tax bands, benefit replacement, dividend shares, household income-composition inference, price pass-through, housing shares and hedges, the output curve, and the no-AGI path—are marked **ASSUMPTION** in code and listed in the UI. They are not presented as measured estimates.
 
 ## Calculated values
 

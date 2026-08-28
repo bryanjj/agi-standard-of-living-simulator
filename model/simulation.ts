@@ -1,5 +1,7 @@
 import { calibration, housingCalibration } from '../calibration/usBaseline';
 import type { Household, SimulationResult, SimulationYear, Scenario } from './types';
+import type { PolicyIntervention } from './types';
+import { interventions } from '../scenarios/interventions';
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -9,7 +11,7 @@ const effectiveTaxRate = (income: number) => {
   return calibration.taxRateHigh.value;
 };
 
-export function simulate(scenario: Scenario, household: Household): SimulationResult {
+export function simulate(scenario: Scenario, household: Household, intervention: PolicyIntervention = interventions['status-quo']): SimulationResult {
   const safeHousehold: Household = {
     annualIncome: Math.max(1, household.annualIncome),
     householdSize: clamp(Math.round(household.householdSize), 1, 12),
@@ -35,7 +37,8 @@ export function simulate(scenario: Scenario, household: Household): SimulationRe
     const wageIndex = employment === 0 ? 0 : nationalLaborIncomeIndex / employment;
     const laborIncome = baseLabor * nationalLaborIncomeIndex;
     const capitalIncome = baseCapital * nationalCapitalIncomeIndex;
-    const transfers = baseTransfers + Math.max(0, baseLabor - laborIncome) * calibration.unemploymentReplacement.value;
+    const equalDividend = calibration.nationalMeanHouseholdIncome.value * (1 - calibration.baselineLaborShare.value) * Math.max(0, nationalCapitalIncomeIndex - 1) * intervention.equalDividendShare;
+    const transfers = baseTransfers + Math.max(0, baseLabor - laborIncome) * intervention.laborLossReplacement + equalDividend;
     const grossResources = laborIncome + capitalIncome + transfers;
     const taxes = grossResources * effectiveTaxRate(grossResources);
     const afterTax = grossResources - taxes;
@@ -59,5 +62,5 @@ export function simulate(scenario: Scenario, household: Household): SimulationRe
       prices: { reproducible: reproduciblePrice, scarce: scarcePrice, householdBasket }, decomposition,
     });
   }
-  return { scenario, household: safeHousehold, years };
+  return { scenario, intervention, household: safeHousehold, years };
 }

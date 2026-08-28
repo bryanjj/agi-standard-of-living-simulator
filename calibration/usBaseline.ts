@@ -17,6 +17,22 @@ export const calibration = {
     value: 0.1, provenance: 'ASSUMPTION', source: 'Simplified current-law fiscal proxy',
     note: 'Ten percent of lost labor income is replaced; not a microsimulation of eligibility.',
   },
+  expandedSafetyNetReplacement: {
+    value: 0.35, provenance: 'ASSUMPTION', source: 'Illustrative intervention calibration',
+    note: 'Expanded safety net replaces 35% of modeled lost labor income.',
+  },
+  citizenDividendShare: {
+    value: 0.1, provenance: 'ASSUMPTION', source: 'Illustrative intervention calibration',
+    note: 'Citizen dividend distributes 10% of new national AI capital income equally.',
+  },
+  publicFundDividendShare: {
+    value: 0.3, provenance: 'ASSUMPTION', source: 'Illustrative intervention calibration',
+    note: 'Public AI fund distributes 30% of new national AI capital income equally.',
+  },
+  nationalMeanHouseholdIncome: {
+    value: 121_026, provenance: 'DATA', source: 'U.S. Census Bureau Historical Income Table H-3', year: 2024,
+    note: 'Mean of the five equally sized household-income quintile means.',
+  },
   reproduciblePassThrough: {
     value: 0.5, provenance: 'ASSUMPTION', source: 'Two-good milestone model',
     note: 'Half of reproducible-output growth passes through to the household price index.',

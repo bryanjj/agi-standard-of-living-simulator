@@ -1,12 +1,14 @@
 export type ProvenanceKind = 'DATA' | 'PAPER' | 'ASSUMPTION' | 'CALCULATED';
 
-export type SourcedValue = {
-  value: number;
+export type Sourced<T> = {
+  value: T;
   provenance: ProvenanceKind;
   source: string;
   year?: number;
   note: string;
 };
+
+export type SourcedValue = Sourced<number>;
 
 export type HousingStatus = 'rent' | 'mortgage' | 'own';
 
@@ -22,6 +24,15 @@ export type Scenario = {
   name: string;
   policy: string;
   horizonYears: number;
+};
+
+export type PolicyIntervention = {
+  id: string;
+  name: string;
+  shortDescription: string;
+  description: string;
+  laborLossReplacement: number;
+  equalDividendShare: number;
 };
 
 export type Decomposition = {
@@ -53,6 +64,7 @@ export type SimulationYear = {
 
 export type SimulationResult = {
   scenario: Scenario;
+  intervention: PolicyIntervention;
   household: Household;
   years: SimulationYear[];
 };
