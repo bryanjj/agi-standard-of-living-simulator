@@ -26,6 +26,7 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 - Reproducible goods versus irreproducible scarce factors
 - Secondary macroeconomic outputs
 - Provenance labels for every calibration value
+- Superscript definitions and citations for research, data, and simulator terms
 
 See [MODEL.md](MODEL.md), [SOURCES.md](SOURCES.md), and [LIMITATIONS.md](LIMITATIONS.md) before interpreting results.
 

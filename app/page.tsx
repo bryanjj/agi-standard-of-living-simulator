@@ -9,6 +9,7 @@ import type { HousingStatus } from '../model/types';
 import { interventionList, interventions, type InterventionId } from '../scenarios/interventions';
 import { transformative20Year } from '../scenarios/transformative20yr';
 import { Affordability, MacroDetails, ResourceComposition, WhyChart } from '../ui/Explanations';
+import { Term, TermNotes } from '../ui/Terms';
 
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const compactMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
@@ -69,14 +70,14 @@ export default function Home() {
 
       <section className="hero" id="top">
         <div className="intro">
-          <p className="eyebrow">AGI STANDARD OF LIVING SIMULATOR <span>• EXPLORATORY, NOT A FORECAST</span></p>
-          <h1>How would AGI change<br />your <em>standard of living?</em></h1>
+          <p className="eyebrow"><Term note="agi">AGI</Term> STANDARD OF LIVING SIMULATOR <span>• EXPLORATORY, NOT A FORECAST</span></p>
+          <h1>How would <Term note="agi">AGI</Term> change<br />your <em>standard of living?</em></h1>
           <p className="lede">Compare how the same AGI transition could affect households across the U.S. income distribution—and test what policy changes.</p>
-          <div className="scenario-pill"><span>SCENARIO</span><strong>20-Year Transformative AGI</strong><small>{intervention.name} · {intervention.shortDescription}</small></div>
+          <div className="scenario-pill"><span>SCENARIO</span><strong><Term note="agi">20-Year Transformative AGI</Term></strong><small>{intervention.name} · {intervention.shortDescription}</small></div>
         </div>
 
         <section className="intervention-panel" aria-labelledby="intervention-heading">
-          <div className="section-label"><span>01</span> <b id="intervention-heading">CHOOSE AN INTERVENTION</b></div>
+          <div className="section-label"><span>01</span> <b id="intervention-heading">CHOOSE AN <Term note="intervention">INTERVENTION</Term></b></div>
           <div className="intervention-grid">{interventionList.map((item) => (
             <button type="button" key={item.id} className={interventionId === item.id ? 'active' : ''} onClick={() => setInterventionId(item.id as InterventionId)}>
               <i>{item.id === 'status-quo' ? 'DEFAULT' : 'ILLUSTRATIVE'}</i><strong>{item.name}</strong><small>{item.shortDescription}</small>
@@ -88,7 +89,7 @@ export default function Home() {
         <div className="workspace quintile-workspace">
           <aside className="inputs-card quintile-card">
             <div className="section-label"><span>02</span> SELECT A HOUSEHOLD</div>
-            <p className="input-help">Choose an income quintile. The model loads U.S. income and typical stock-equity benchmarks for that group.</p>
+            <p className="input-help">Choose an <Term note="quintile">income quintile</Term>. The model loads U.S. income and typical <Term note="equity">stock-equity</Term> benchmarks for that group.</p>
             <div className="quintile-selector" role="group" aria-label="Household income quintile">
               {quintilePresets.map((preset) => (
                 <button type="button" key={preset.id} className={selectedId === preset.id ? 'active' : ''} onClick={() => selectQuintile(preset.id)} style={{ borderLeftColor: preset.color }}>
@@ -103,7 +104,7 @@ export default function Home() {
                 <label>Annual household income<div className="money-input"><span>$</span><input aria-label="Annual household income" type="number" min="1" value={income} onChange={(e) => customize(() => setIncome(Number(e.target.value)))} /></div></label>
                 <div className="paired">
                   <label>Household size<input aria-label="Household size" type="number" min="1" max="12" value={size} onChange={(e) => customize(() => setSize(Number(e.target.value)))} /></label>
-                  <label>Stock &amp; fund equity<div className="money-input"><span>$</span><input aria-label="Stock and fund equity" type="number" min="0" value={equityHoldings} onChange={(e) => customize(() => setEquityHoldings(Number(e.target.value)))} /></div></label>
+                  <label><Term note="equity">Stock &amp; fund equity</Term><div className="money-input"><span>$</span><input aria-label="Stock and fund equity" type="number" min="0" value={equityHoldings} onChange={(e) => customize(() => setEquityHoldings(Number(e.target.value)))} /></div></label>
                 </div>
                 <p className="input-help">Stocks and stock funds held directly or through retirement accounts. Cash, deposits, bonds, and home equity do not receive modeled AI-capital returns.</p>
                 <fieldset><legend>Housing</legend><div className="segmented">
@@ -116,7 +117,7 @@ export default function Home() {
 
           <section className="result-card comparison-card">
             <div className="result-head">
-              <div><p className="section-label"><span>03</span> FIVE HOUSEHOLD PATHS</p><h2>Material purchasing power</h2><p className="axis-definition">Y-axis: equivalent consumption bundle you can afford · Today = 100</p></div>
+              <div><p className="section-label"><span>03</span> FIVE HOUSEHOLD PATHS</p><h2><Term note="purchasingPower">Material purchasing power</Term></h2><p className="axis-definition">Y-axis: <Term note="purchasingPower">equivalent consumption bundle</Term> you can afford · Today = 100</p></div>
               <div className="outcome" style={{ color: selectedPreset.color }}><strong>{round(y20.standardOfLiving)}</strong><span>{selectedPreset.shortLabel} · YEAR 20<br />TODAY = 100</span></div>
             </div>
             <div className="chart-wrap comparison-chart" aria-label="Material purchasing power for five U.S. household-income quintiles over 20 years">
@@ -135,7 +136,7 @@ export default function Home() {
             </div>
             <div className="quintile-legend">
               {quintilePresets.map((preset) => <button type="button" className={selectedId === preset.id ? 'active' : ''} key={preset.id} onClick={() => selectQuintile(preset.id)}><i style={{ background: preset.color }} />{preset.shortLabel}</button>)}
-              <span><i /> No-AGI baseline</span>
+              <span><i /> <Term note="noAgi">No-AGI baseline</Term></span>
             </div>
             <div className="milestones selected-milestones">
               <div><span>{selectedPreset.shortLabel} TODAY</span><strong>100</strong></div><i />
@@ -149,10 +150,10 @@ export default function Home() {
 
       <section className="first-explain" id="method">
         <p className="eyebrow">WHAT THE Y-AXIS MEANS</p>
-        <h2>Purchasing power, not salary.</h2>
+        <h2><Term note="purchasingPower">Purchasing power</Term>, not salary.</h2>
         <div className="explain-grid">
-          <article><span>100</span><h3>Today&apos;s bundle</h3><p>Every line begins at 100: what that quintile&apos;s household can materially afford today.</p></article>
-          <article><span>↑</span><h3>Above 100</h3><p>The household can command a larger equivalent bundle—even if its nominal wage falls.</p></article>
+          <article><span>100</span><h3>Today&apos;s bundle</h3><p>Every line begins at 100: what that <Term note="quintile">quintile&apos;s</Term> household can materially afford today.</p></article>
+          <article><span>↑</span><h3>Above 100</h3><p>The household can command a larger <Term note="purchasingPower">equivalent bundle</Term>—even if its nominal wage falls.</p></article>
           <article className="assumption-card"><small>SELECTED HOUSEHOLD</small><strong>{selectedPreset.label}{isCustom ? ' · customized' : ''}</strong><p>{money.format(income)} income · {compactMoney.format(equityHoldings)} stock equity · {size} people.</p></article>
         </div>
       </section>
@@ -164,12 +165,12 @@ export default function Home() {
         </div>
         <div className="two-col">
           <div><p className="panel-kicker">CONTRIBUTION TO THE INDEX</p><WhyChart year={focused} /></div>
-          <div className="narrative-card"><small>{intervention.name.toUpperCase()}</small><h3>{focused.standardOfLiving >= 100 ? 'Abundance outweighs lost labor income.' : 'Lost labor income outweighs abundance.'}</h3><p>By year {focusYear}, {Math.round(focused.automation * 100)}% of original work is automatable. {intervention.description} Irreproducible scarce factors remain constrained while reproducible goods get cheaper.</p><strong>{Math.round(focused.standardOfLiving - 100) >= 0 ? '+' : ''}{Math.round(focused.standardOfLiving - 100)} points</strong><span>net change from today</span></div>
+          <div className="narrative-card"><small>{intervention.name.toUpperCase()}</small><h3>{focused.standardOfLiving >= 100 ? 'Abundance outweighs lost labor income.' : 'Lost labor income outweighs abundance.'}</h3><p>By year {focusYear}, <Term note="automation">{Math.round(focused.automation * 100)}% of original work is automatable</Term>. {intervention.description} <Term note="scarceFactors">Irreproducible scarce factors</Term> remain constrained while <Term note="reproducible">reproducible goods</Term> get cheaper.</p><strong>{Math.round(focused.standardOfLiving - 100) >= 0 ? '+' : ''}{Math.round(focused.standardOfLiving - 100)} points</strong><span>net change from today</span></div>
         </div>
       </section>
 
       <section className="analysis-section">
-        <div className="section-intro"><div><p className="eyebrow">WHERE {selectedPreset.shortLabel}&apos;S RESOURCES COME FROM</p><h2>From paychecks to ownership.</h2></div><p className="side-copy">The selected intervention changes transfers or broad ownership; existing capital income still follows today&apos;s holdings.</p></div>
+        <div className="section-intro"><div><p className="eyebrow">WHERE {selectedPreset.shortLabel}&apos;S RESOURCES COME FROM</p><h2>From paychecks to ownership.</h2></div><p className="side-copy">The selected <Term note="intervention">intervention</Term> changes transfers or broad ownership; existing <Term note="resources">capital income</Term> still follows today&apos;s holdings.</p></div>
         <ResourceComposition result={result} />
         <div className="ownership-note"><strong>{Math.round(calibration.topTenEquityShare.value * 100)}%</strong><p>of U.S. corporate equities and mutual fund shares are held by the top 10% of the wealth distribution in the Federal Reserve&apos;s 2026 Q1 data.</p><a href="https://www.federalreserve.gov/releases/z1/dataviz/dfa/compare/chart/" target="_blank" rel="noreferrer">View the data ↗</a></div>
       </section>
@@ -187,8 +188,10 @@ export default function Home() {
         </details>
       </section>
 
+      <TermNotes />
+
       <section className="method-section">
-        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Every number has a label.</h2><p>Income presets use Census household quintile means. Stock equity and inferred household traits use the latest Survey of Consumer Finances. Cash and other non-equity assets do not receive AI-capital returns. Policy interventions are transparent stress tests, not enacted proposals or forecasts.</p></div>
+        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Every number has a label.</h2><p>Income presets use Census household <Term note="quintile">quintile</Term> means. <Term note="equity">Stock equity</Term> and inferred household traits use the latest Survey of Consumer Finances. Cash and other non-equity assets do not receive AI-capital returns. Policy <Term note="intervention">interventions</Term> are transparent stress tests, not enacted proposals or forecasts.</p></div>
         <div className="source-list">
           <a href="https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-income-households.html" target="_blank" rel="noreferrer"><span>DATA · 2024</span><strong>U.S. Census H-3</strong><small>Mean household income by quintile ↗</small></a>
           <a href="https://www.federalreserve.gov/econres/scfindex.htm" target="_blank" rel="noreferrer"><span>DATA · 2022</span><strong>Survey of Consumer Finances</strong><small>Median stock equity by income group ↗</small></a>
