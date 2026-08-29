@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { calibration } from '../calibration/usBaseline';
 import { quintileById } from '../calibration/quintiles';
-import { purchasingPowerOutcomes, purchasingPowerScale, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
+import { meanHouseholdPath, purchasingPowerOutcomes, purchasingPowerScale, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
 import { employmentProbabilityAtYear } from '../model/employment';
 import { simulate } from '../model/simulation';
 import { interventions } from '../scenarios/interventions';
@@ -20,10 +20,11 @@ const pathOpacity = (workerCount: number) => 1 - (1 - 0.003) ** workerCount;
 function OutcomeTooltip({ active, label, payload, metric }: { active?: boolean; label?: number; payload?: Array<{ payload: Record<string, number> }>; metric: 'income' | 'purchasing power' }) {
   if (!active || !payload?.length) return null;
   const datum = payload[0].payload;
+  const mean = metric === 'income' ? datum.meanIncome : datum.meanPurchasingPower;
   const employed = metric === 'income' ? datum.employedIncome : datum.employedPurchasingPower;
   const displaced = metric === 'income' ? datum.displacedIncome : datum.displacedPurchasingPower;
   const displacedLabel = metric === 'income' ? 'if not employed' : 'after buffer ends';
-  return <div className="income-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${Number(label).toFixed(1)}`}</small><strong>{round(datum.employedChance)}%</strong><span>chance employed</span><b>{round(employed)} if employed · {round(displaced)} {displacedLabel}</b></div>;
+  return <div className="income-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${Number(label).toFixed(1)}`}</small><strong>{round(mean)}</strong><span>simulation mean</span><b>{round(datum.employedChance)}% chance employed · {round(employed)} if employed · {round(displaced)} {displacedLabel}</b></div>;
 }
 
 export default function Home() {
@@ -34,6 +35,7 @@ export default function Home() {
 
   const weeklyOutcomes = useMemo(() => weeklyHouseholdOutcomes(result, result), [result]);
   const simulatedHouseholdPaths = useMemo(() => simulateHouseholdPaths(result, result, 1_000, 8), [result]);
+  const simulationMean = useMemo(() => meanHouseholdPath(simulatedHouseholdPaths), [simulatedHouseholdPaths]);
   const displayedHouseholdPaths = useMemo(() => sampleHouseholdPaths(simulatedHouseholdPaths, 250), [simulatedHouseholdPaths]);
   const chartData = useMemo(() => weeklyOutcomes.map((outcome, index) => ({
     year: outcome.year,
@@ -41,16 +43,18 @@ export default function Home() {
     employedChance: outcome.employmentProbability * 100,
     employedPurchasingPower: outcome.employedPurchasingPower,
     displacedPurchasingPower: outcome.displacedPurchasingPower,
+    meanPurchasingPower: simulationMean.purchasingPowerValues[index],
     ...Object.fromEntries(displayedHouseholdPaths.map((path) => [`pp${path.id}`, path.purchasingPowerValues[index]])),
-  })), [weeklyOutcomes, displayedHouseholdPaths]);
+  })), [weeklyOutcomes, simulationMean, displayedHouseholdPaths]);
 
   const incomeChartData = useMemo(() => weeklyOutcomes.map((outcome, index) => ({
     year: outcome.year,
     employedChance: outcome.employmentProbability * 100,
     employedIncome: outcome.employedIncome,
     displacedIncome: outcome.displacedIncome,
+    meanIncome: simulationMean.incomeValues[index],
     ...Object.fromEntries(displayedHouseholdPaths.map((path) => [path.id, path.incomeValues[index]])),
-  })), [weeklyOutcomes, displayedHouseholdPaths]);
+  })), [weeklyOutcomes, simulationMean, displayedHouseholdPaths]);
   const chanceEmployedAt = (year: number) => 100 * employmentProbabilityAtYear(year);
   const chanceLabel = (year: number) => {
     const chance = chanceEmployedAt(year);
@@ -89,7 +93,7 @@ export default function Home() {
         <div className="workspace single-workspace">
           <section className="result-card comparison-card">
             <div className="result-head">
-              <div><p className="section-label"><span>02</span> 1,000 SIMULATED WORKERS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Darker paths are more likely · <Term note="consumptionSmoothing">52-week buffer</Term></p></div>
+              <div><p className="section-label"><span>02</span> 1,000 SIMULATED WORKERS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Dark line is the mean · <Term note="consumptionSmoothing">52-week buffer</Term></p></div>
               <div className="outcome" style={{ color: referencePreset.color }}><strong>{calibration.consumptionSmoothingWeeks.value}</strong><span>WEEK TRANSITION<br />AFTER JOB LOSS</span></div>
             </div>
             <div className="chart-wrap comparison-chart" aria-label="Purchasing-power outcomes for one thousand simulated comparable Q3 workers over 40 years">
@@ -103,11 +107,13 @@ export default function Home() {
                   <Tooltip content={<OutcomeTooltip metric="purchasing power" />} />
                   {displayedHouseholdPaths.map((path) => <Line key={`pp${path.id}`} type="linear" dataKey={`pp${path.id}`} name={`${path.workerCount} simulated workers`} stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={pathOpacity(path.workerCount)} dot={false} activeDot={false} isAnimationActive={false} />)}
                   <Line type="monotone" dataKey="baseline" name="No-AGI baseline" stroke="#8b8d88" strokeWidth={1.25} strokeDasharray="5 5" dot={false} />
+                  <Line type="monotone" dataKey="meanPurchasingPower" name="Simulation mean" stroke="#20251f" strokeWidth={2.75} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
             <div className="quintile-legend single-legend probability-legend">
               <span className="density-key"><i /> Darker = more likely</span>
+              <span className="mean-key"><i /> Simulation mean</span>
               <span><i /> <Term note="noAgi">No-AGI baseline</Term></span>
             </div>
             <div className="milestones selected-milestones">
@@ -116,13 +122,13 @@ export default function Home() {
               <div><span>YEAR 20</span><strong>{chanceLabel(20)}</strong></div><i />
               <div><span>YEAR 40</span><strong>{chanceLabel(40)}</strong></div>
             </div>
-            <p className="simulation-note chart-density-note">The 1,000 simulated workers use the same job histories as the income chart. The chart draws 250 representative paths, each weighted as four workers. After each job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown. Reemployment restores the employed path.</p>
+            <p className="simulation-note chart-density-note">The dark line is the mean across all 1,000 simulated workers at each week. Both charts use the same job histories. The chart draws 250 representative paths, each weighted as four workers. After each job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown. Reemployment restores the employed path.</p>
           </section>
         </div>
 
         <section className="result-card income-chart-card">
           <div className="result-head">
-            <div><p className="section-label">1,000 SIMULATED WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">50% employed in year 10</Term> · Approaches 0% thereafter</p></div>
+            <div><p className="section-label">1,000 SIMULATED WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">50% employed in year 10</Term> · Dark line is the mean</p></div>
             <div className="displacement-callout"><strong>{round(displacedByYearTen)}%</strong><span>MODELED CHANCE<br />NOT EMPLOYED AT YEAR 10</span></div>
           </div>
           <div className="chart-wrap income-chart" aria-label="After-tax income outcomes for one thousand simulated comparable Q3 workers over 40 years">
@@ -135,12 +141,13 @@ export default function Home() {
                 </YAxis>
                 <Tooltip content={<OutcomeTooltip metric="income" />} />
                 {displayedHouseholdPaths.map((path) => <Line key={path.id} type="linear" dataKey={path.id} name={`${path.workerCount} simulated workers`} stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={pathOpacity(path.workerCount)} dot={false} activeDot={false} isAnimationActive={false} />)}
+                <Line type="monotone" dataKey="meanIncome" name="Simulation mean" stroke="#20251f" strokeWidth={2.75} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <div className="quintile-legend single-legend probability-legend income-legend"><span className="density-key"><i /> Darker = more likely</span></div>
+          <div className="quintile-legend single-legend probability-legend income-legend"><span className="density-key"><i /> Darker = more likely</span><span className="mean-key"><i /> Simulation mean</span></div>
           <div className="displacement-probabilities" aria-label="Chance of having a job"><span><small>TODAY</small><strong>{chanceLabel(0)}</strong></span><span><small>YEAR 10</small><strong>{chanceLabel(10)}</strong></span><span><small>YEAR 20</small><strong>{chanceLabel(20)}</strong></span><span><small>YEAR 30</small><strong>{chanceLabel(30)}</strong></span><span><small>YEAR 40</small><strong>{chanceLabel(40)}</strong></span></div>
-          <p className="simulation-note">Each employed worker faces a weekly job-loss draw. An unemployed worker can find another job, but the weekly chance declines from 6.4% today and approaches 0% without reaching it. After each job loss, <Term note="unemploymentInsurance">unemployment insurance replaces 42.2% of the worker&apos;s wage for 16 weeks</Term>. Labor income then remains at $0 until reemployment; stock income and baseline government support can keep household income above $0.</p>
+          <p className="simulation-note">The dark line is the mean across all 1,000 simulated workers at each week. Each employed worker faces a weekly job-loss draw. An unemployed worker can find another job, but the weekly chance declines from 6.4% today and approaches 0% without reaching it. After each job loss, <Term note="unemploymentInsurance">unemployment insurance replaces 42.2% of the worker&apos;s wage for 16 weeks</Term>. Labor income then remains at $0 until reemployment; stock income and baseline government support can keep household income above $0.</p>
         </section>
       </section>
 

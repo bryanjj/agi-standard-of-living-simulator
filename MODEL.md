@@ -120,7 +120,7 @@ Purchasing power does not fall immediately to the long-run displaced level. For 
 
 This represents unemployment insurance and savings drawdown. Unemployment insurance is explicit in the income path; the additional consumption smoothing is a transparent simulator assumption, not an estimate of a Q3 household's liquid savings. Reemployment restores the employed purchasing-power path. A later job loss starts a new transition. The model does not treat this buffer as stock equity or give it AI-capital returns.
 
-The charts render weekly points rather than annual steps. Representative paths are drawn with opacity based on the number of simulated workers they represent. Where likely paths overlap, their color accumulates and makes more probable outcomes darker. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond initial employment, job loss, and reemployment timing.
+The charts render weekly points rather than annual steps. Representative paths are drawn with opacity based on the number of simulated workers they represent. Where likely paths overlap, their color accumulates and makes more probable outcomes darker. A separate dark line shows the arithmetic mean across all 1,000 simulated workers at every week for income and purchasing power. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond initial employment, job loss, and reemployment timing.
 
 ## 7. Exact decomposition
 

@@ -22,13 +22,13 @@ const notes = {
   purchasingPower: {
     marker: 4,
     name: 'Material purchasing power',
-    definition: 'The simulator’s after-tax household resources divided by its modeled basket price. Q3 today is set to 100. Each path applies modeled prices and a temporary transition buffer to one simulated worker’s income path. Darker overlapping paths indicate more likely outcomes.',
+    definition: 'The simulator’s after-tax household resources divided by its modeled basket price. Q3 today is set to 100. Each path applies modeled prices and a temporary transition buffer to one simulated worker’s income path. Darker overlapping paths indicate more likely outcomes, and the dark line is the weekly mean across all 1,000 workers.',
     sources: [],
   },
   incomeIndex: {
     marker: 5,
     name: 'Modeled household income',
-    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each line is one fixed weekly Monte Carlo path. Labor income can stop after job loss and resume after reemployment. Darker overlapping paths indicate more likely outcomes.',
+    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each line is one fixed weekly Monte Carlo path. Labor income can stop after job loss and resume after reemployment. Darker overlapping paths indicate more likely outcomes, and the dark line is the weekly mean across all 1,000 workers.',
     sources: [],
   },
   noAgi: {

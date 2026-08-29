@@ -21,7 +21,7 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 - Status quo policy path
 - A 40-year display horizon with employment at 50% in year 10 and approaching, but never reaching, zero
 - Purchasing power and after-tax income normalized to Q3 today = 100
-- Probability-density charts for 1,000 matched weekly employment, income, and purchasing-power paths, shown through 250 weighted representative paths
+- Probability-density charts for 1,000 matched weekly employment, income, and purchasing-power paths, shown through 250 weighted representative paths with a mean across all 1,000 workers
 - Weekly job loss and reemployment, with the chance of finding work declining asymptotically
 - Unemployment insurance replacing 42.2% of worker wages for 16 weeks after each job loss
 - A 52-week purchasing-power transition buffer after job loss

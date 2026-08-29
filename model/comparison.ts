@@ -39,6 +39,11 @@ export type DisplayedHouseholdPath = SimulatedHouseholdPath & {
   workerCount: number;
 };
 
+export type MeanHouseholdPath = {
+  incomeValues: number[];
+  purchasingPowerValues: number[];
+};
+
 export type WeeklyHouseholdOutcome = {
   year: number;
   employmentProbability: number;
@@ -234,4 +239,17 @@ export const sampleHouseholdPaths = (
     const representative = paths[Math.floor((start + end - 1) / 2)];
     return { ...representative, id: `sample${index}`, workerCount: end - start };
   });
+};
+
+export const meanHouseholdPath = (paths: SimulatedHouseholdPath[]): MeanHouseholdPath => {
+  if (paths.length === 0) return { incomeValues: [], purchasingPowerValues: [] };
+
+  return {
+    incomeValues: paths[0].incomeValues.map((_, week) => (
+      paths.reduce((sum, path) => sum + path.incomeValues[week], 0) / paths.length
+    )),
+    purchasingPowerValues: paths[0].purchasingPowerValues.map((_, week) => (
+      paths.reduce((sum, path) => sum + path.purchasingPowerValues[week], 0) / paths.length
+    )),
+  };
 };
