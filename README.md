@@ -4,7 +4,7 @@
 
 [View the live simulator](https://common-wealth-agi-simulator.bryan0.chatgpt.site/)
 
-The first milestone implements one named scenario, **20-Year Transformative AGI / No New Policy**, with a two-category consumption model and a deterministic TypeScript simulation.
+The first milestone implements one named scenario, **Logistic Transformative AGI / No New Policy**, with a two-category consumption model and a deterministic TypeScript simulation.
 
 ## Local development
 
@@ -19,10 +19,10 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 
 - One source-backed Q3 middle-income reference household
 - Status quo policy path
-- A 40-year display horizon with the transformative transition complete in year 20
+- A 40-year display horizon with employment at 50% in year 10 and approaching, but never reaching, zero
 - Purchasing power and after-tax income normalized to Q3 today = 100
 - Probability-density charts for 1,000 matched weekly employment, income, and purchasing-power paths, shown through 250 weighted representative paths
-- Weekly job loss and reemployment, with the chance of finding work declining to zero in year 20
+- Weekly job loss and reemployment, with the chance of finding work declining asymptotically
 - Unemployment insurance replacing 42.2% of worker wages for 16 weeks after each job loss
 - A 52-week purchasing-power transition buffer after job loss
 - No-AGI comparison path

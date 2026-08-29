@@ -65,13 +65,13 @@ export const calibration = {
     value: 0.01, provenance: 'ASSUMPTION', source: 'No-AGI comparison path',
     note: 'One percent annual growth in household real purchasing power.',
   },
-  automationPerYear: {
-    value: 0.05, provenance: 'ASSUMPTION', source: 'Named 20-year transformative scenario',
-    note: 'Five percentage points of the original workforce become automatable each year.',
+  employmentLogisticMidpointYears: {
+    value: 10, provenance: 'ASSUMPTION', source: 'Named transformative scenario',
+    note: 'The logistic chance-of-employment curve passes through 50% in year 10 and approaches, but never reaches, zero.',
   },
-  yearTwentyOutputMultiple: {
+  maximumOutputMultiple: {
     value: 10, provenance: 'ASSUMPTION', source: 'Calibration to Korinek and Suh transformative scenario', year: 2024,
-    note: 'Rounded milestone target; their published illustration rises to more than ten times baseline output.',
+    note: 'Asymptotic output ceiling; their published transformative illustration rises to more than ten times baseline output.',
   },
   laborShareCurveExponent: {
     value: 1.4, provenance: 'ASSUMPTION', source: 'Milestone-one reduced-form curve',

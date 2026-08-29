@@ -2,27 +2,29 @@
 
 This milestone is a transparent reduced-form household simulator, not a general-equilibrium model. All calculations are deterministic and occur in `model/simulation.ts`.
 
-## 1. Automation
+## 1. Employment and automation
 
-For year `t` from 0 to 40:
+For year `t` from 0 to 40, the chance that a modeled worker has a job follows a logistic curve. Let `p₀ = 0.959`, the current labor-force employment rate, and let the midpoint `m = 10` years. The steepness is calculated so the curve passes through `p₀` today:
 
-`automation(t) = min(1, 0.05 × t)`
+`k = ln[p₀ / (1 − p₀)] / m ≈ 0.315`
 
-`employment(t) = 1 − automation(t)`
+`jobProbability(t) = 1 / [1 + exp(k × (t − m))]`
 
-This encodes the named scenario: five percentage points of the original workforce become automatable each year, no replacement jobs, and full automation in year 20. The simulation continues through year 40 to show the post-transition path; automation remains at 100% after year 20.
+This gives 95.9% today, exactly 50% in year 10, 4.1% in year 20, and a positive value that approaches zero without reaching it. The 95.9% starting point is one minus the BLS July 2026 unemployment rate. It describes employment among the civilian labor force, not the employment-to-population ratio.
 
-For the household Monte Carlo charts, the chance that a modeled worker has a job is separate from this normalized macro employment index:
+The macro employment index is normalized to 1 today, and automation is its inverse:
 
-`jobProbability(t) = 0.959 × max(0, 1 − t / 20)`
+`employmentIndex(t) = jobProbability(t) / p₀`
 
-The 95.9% starting point is one minus the BLS July 2026 unemployment rate. It describes employment among the civilian labor force, not the employment-to-population ratio. The probability declines continuously to zero in year 20 and remains at zero through year 40.
+`automation(t) = 1 − employmentIndex(t)`
+
+Automation therefore approaches 100% without reaching it. Newly created human tasks are not added.
 
 ## 2. Output and factor shares
 
 `output(t) = 1 + (10 − 1) × automation(t)²`
 
-Output is normalized to 1 today and reaches 10 in year 20. Ten is an explicit calibration assumption, chosen to approximate the published Korinek–Suh transformative illustration rather than copied as a forecast.
+Output is normalized to 1 today and approaches 10 as automation approaches 100%. Ten is an explicit calibration assumption, chosen to approximate the published Korinek–Suh transformative illustration rather than copied as a forecast.
 
 `laborShare(t) = 0.59 × (1 − automation(t))^1.4`
 
@@ -108,7 +110,7 @@ The weekly job-loss probability is solved so that expected employment continues 
 
 `jobLossProbability(w) = [p(w) + (1 − p(w)) × reemploymentProbability(w) − p(w + 1)] / p(w)`
 
-At year 20, both employment and reemployment reach zero. This is a reduced-form transition, not an occupation-level labor-market model. For rendering performance, the charts draw 250 representative paths; each path is weighted as four of the 1,000 simulated workers.
+Employment and reemployment both approach zero without reaching it. This is a reduced-form transition, not an occupation-level labor-market model. For rendering performance, the charts draw 250 representative paths; each path is weighted as four of the 1,000 simulated workers.
 
 Purchasing power does not fall immediately to the long-run displaced level. For a worker displaced in week `d`, the simulator records purchasing power just before displacement and applies a one-year transition buffer:
 

@@ -1,6 +1,7 @@
 import type { SimulationResult, SimulationYear } from './types';
 import { effectiveTaxRate } from './simulation';
 import { calibration } from '../calibration/usBaseline';
+import { employmentProbabilityAtYear } from './employment';
 
 export const afterTaxResources = (year: SimulationYear) => year.laborIncome + year.capitalIncome + year.transfers - year.taxes;
 
@@ -14,11 +15,6 @@ export const afterTaxIncomeIndex = (result: SimulationResult, reference: Simulat
 
 export const purchasingPowerScale = (result: SimulationResult, reference: SimulationResult) => (
   afterTaxResources(result.years[0]) / afterTaxResources(reference.years[0])
-);
-
-export const employmentProbabilityAtYear = (year: number) => (
-  calibration.currentLaborForceEmploymentRate.value
-    * (1 - Math.min(1, Math.max(0, year) * calibration.automationPerYear.value))
 );
 
 export type IncomeOutcomes = {

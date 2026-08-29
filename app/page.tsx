@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { calibration } from '../calibration/usBaseline';
 import { quintileById } from '../calibration/quintiles';
-import { employmentProbabilityAtYear, purchasingPowerOutcomes, purchasingPowerScale, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
+import { purchasingPowerOutcomes, purchasingPowerScale, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
+import { employmentProbabilityAtYear } from '../model/employment';
 import { simulate } from '../model/simulation';
 import { interventions } from '../scenarios/interventions';
 import { transformative20Year } from '../scenarios/transformative20yr';
@@ -51,6 +52,10 @@ export default function Home() {
     ...Object.fromEntries(displayedHouseholdPaths.map((path) => [path.id, path.incomeValues[index]])),
   })), [weeklyOutcomes, displayedHouseholdPaths]);
   const chanceEmployedAt = (year: number) => 100 * employmentProbabilityAtYear(year);
+  const chanceLabel = (year: number) => {
+    const chance = chanceEmployedAt(year);
+    return chance < 0.1 ? '<0.1%' : `${chance.toFixed(1)}%`;
+  };
   const displacedByYearTen = 100 - chanceEmployedAt(10);
 
   const focused = result.years[focusYear];
@@ -69,8 +74,8 @@ export default function Home() {
         <div className="intro">
           <p className="eyebrow"><Term note="agi">AGI</Term> STANDARD OF LIVING SIMULATOR</p>
           <h1>How would <Term note="agi">AGI</Term> change<br />your <em>standard of living?</em></h1>
-          <p className="lede">Follow a middle-income U.S. household across a 40-year window around a 20-year AGI transition.</p>
-          <div className="scenario-pill"><span>SCENARIO</span><strong><Term note="agi">20-Year Transformative AGI</Term></strong><small>{intervention.name} · {intervention.shortDescription}</small></div>
+          <p className="lede">Follow a middle-income U.S. household across a 40-year logistic employment transition.</p>
+          <div className="scenario-pill"><span>SCENARIO</span><strong><Term note="agi">{result.scenario.name}</Term></strong><small>{intervention.name} · {intervention.shortDescription}</small></div>
         </div>
 
         <section className="reference-household" aria-label="Q3 middle-income reference household">
@@ -106,10 +111,10 @@ export default function Home() {
               <span><i /> <Term note="noAgi">No-AGI baseline</Term></span>
             </div>
             <div className="milestones selected-milestones">
-              <div><span>EMPLOYED TODAY</span><strong>{chanceEmployedAt(0).toFixed(1)}%</strong></div><i />
-              <div><span>YEAR 10</span><strong>{chanceEmployedAt(10).toFixed(1)}%</strong></div><i />
-              <div><span>YEAR 20</span><strong>0%</strong></div><i />
-              <div><span>YEAR 40</span><strong>0%</strong></div>
+              <div><span>EMPLOYED TODAY</span><strong>{chanceLabel(0)}</strong></div><i />
+              <div><span>YEAR 10</span><strong>{chanceLabel(10)}</strong></div><i />
+              <div><span>YEAR 20</span><strong>{chanceLabel(20)}</strong></div><i />
+              <div><span>YEAR 40</span><strong>{chanceLabel(40)}</strong></div>
             </div>
             <p className="simulation-note chart-density-note">The 1,000 simulated workers use the same job histories as the income chart. The chart draws 250 representative paths, each weighted as four workers. After each job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown. Reemployment restores the employed path.</p>
           </section>
@@ -117,7 +122,7 @@ export default function Home() {
 
         <section className="result-card income-chart-card">
           <div className="result-head">
-            <div><p className="section-label">1,000 SIMULATED WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">Workers can return to work</Term> · 0% employed in year 20</p></div>
+            <div><p className="section-label">1,000 SIMULATED WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">50% employed in year 10</Term> · Approaches 0% thereafter</p></div>
             <div className="displacement-callout"><strong>{round(displacedByYearTen)}%</strong><span>MODELED CHANCE<br />NOT EMPLOYED AT YEAR 10</span></div>
           </div>
           <div className="chart-wrap income-chart" aria-label="After-tax income outcomes for one thousand simulated comparable Q3 workers over 40 years">
@@ -134,8 +139,8 @@ export default function Home() {
             </ResponsiveContainer>
           </div>
           <div className="quintile-legend single-legend probability-legend income-legend"><span className="density-key"><i /> Darker = more likely</span></div>
-          <div className="displacement-probabilities" aria-label="Chance of having a job"><span><small>TODAY</small><strong>{round(chanceEmployedAt(0))}%</strong></span><span><small>YEAR 10</small><strong>{round(chanceEmployedAt(10))}%</strong></span><span><small>YEAR 20</small><strong>0%</strong></span><span><small>YEAR 30</small><strong>0%</strong></span><span><small>YEAR 40</small><strong>0%</strong></span></div>
-          <p className="simulation-note">Each employed worker faces a weekly job-loss draw. An unemployed worker can find another job, but the weekly chance declines from 6.4% today to 0% in year 20. After each job loss, <Term note="unemploymentInsurance">unemployment insurance replaces 42.2% of the worker&apos;s wage for 16 weeks</Term>. Labor income then remains at $0 until reemployment; stock income and baseline government support can keep household income above $0.</p>
+          <div className="displacement-probabilities" aria-label="Chance of having a job"><span><small>TODAY</small><strong>{chanceLabel(0)}</strong></span><span><small>YEAR 10</small><strong>{chanceLabel(10)}</strong></span><span><small>YEAR 20</small><strong>{chanceLabel(20)}</strong></span><span><small>YEAR 30</small><strong>{chanceLabel(30)}</strong></span><span><small>YEAR 40</small><strong>{chanceLabel(40)}</strong></span></div>
+          <p className="simulation-note">Each employed worker faces a weekly job-loss draw. An unemployed worker can find another job, but the weekly chance declines from 6.4% today and approaches 0% without reaching it. After each job loss, <Term note="unemploymentInsurance">unemployment insurance replaces 42.2% of the worker&apos;s wage for 16 weeks</Term>. Labor income then remains at $0 until reemployment; stock income and baseline government support can keep household income above $0.</p>
         </section>
       </section>
 

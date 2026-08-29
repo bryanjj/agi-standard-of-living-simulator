@@ -5,6 +5,7 @@ import { simulate } from './simulation';
 import { interventions } from '../scenarios/interventions';
 import { quintilePresets } from '../calibration/quintiles';
 import { afterTaxIncomeIndex, purchasingPowerIndex, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from './comparison';
+import { employmentProbabilityAtYear } from './employment';
 
 const household: Household = {
   annualIncome: 85_000,
@@ -34,11 +35,11 @@ describe('simulate', () => {
     }
   });
 
-  it('has zero employment and labor income at full automation', () => {
+  it('approaches full automation without reaching zero employment', () => {
     const final = simulate(transformative20Year, household).years[20];
-    expect(final.automation).toBe(1);
-    expect(final.employment).toBe(0);
-    expect(final.laborIncome).toBe(0);
+    expect(final.automation).toBeCloseTo(1 - 0.041 / 0.959, 10);
+    expect(final.employment).toBeGreaterThan(0);
+    expect(final.laborIncome).toBeGreaterThan(0);
   });
 
   it('pays no capital income to a household with no equity holdings', () => {
@@ -92,17 +93,17 @@ describe('simulate', () => {
     expect(afterTaxIncomeIndex(result, result, 20)).not.toBeCloseTo(purchasingPowerIndex(result, result, 20), 5);
   });
 
-  it('declines smoothly from the current employment rate to zero', () => {
+  it('follows a logistic employment curve with a 50% year-ten midpoint', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
     const timeline = weeklyHouseholdOutcomes(result, result);
     expect(timeline[0].employmentProbability).toBeCloseTo(0.959, 10);
-    expect(timeline[520].employmentProbability).toBeCloseTo(0.4795, 10);
-    expect(timeline[1040].employmentProbability).toBe(0);
-    expect(timeline[2080].employmentProbability).toBe(0);
-    for (let week = 1; week <= 1040; week += 1) {
+    expect(timeline[520].employmentProbability).toBeCloseTo(0.5, 10);
+    expect(timeline[1040].employmentProbability).toBeCloseTo(0.041, 10);
+    expect(timeline[2080].employmentProbability).toBeGreaterThan(0);
+    expect(employmentProbabilityAtYear(100)).toBeGreaterThan(0);
+    for (let week = 1; week < timeline.length; week += 1) {
       expect(timeline[week].employmentProbability).toBeLessThan(timeline[week - 1].employmentProbability);
     }
-    for (let week = 1041; week < timeline.length; week += 1) expect(timeline[week].employmentProbability).toBe(0);
   });
 
   it('creates stable weekly paths with job loss and reemployment', () => {
@@ -116,13 +117,11 @@ describe('simulate', () => {
     expect(first.every((path) => path.reemploymentWeeks.every((week) => path.employmentValues[week]))).toBe(true);
     const employedShare = (week: number) => first.filter((path) => path.employmentValues[week]).length / first.length;
     expect(employedShare(0)).toBeCloseTo(0.959, 1);
-    expect(employedShare(520)).toBeCloseTo(0.4795, 1);
-    expect(employedShare(1040)).toBe(0);
-    expect(employedShare(2080)).toBe(0);
+    expect(employedShare(520)).toBeCloseTo(0.5, 1);
+    expect(employedShare(1040)).toBeCloseTo(0.041, 1);
     const timeline = weeklyHouseholdOutcomes(result, result);
     expect(first.every((path) => path.incomeValues[1040] >= timeline[1040].displacedIncome)).toBe(true);
     expect(first.some((path) => path.incomeValues[1040] > timeline[1040].displacedIncome)).toBe(true);
-    expect(first.every((path) => path.incomeValues[2080] === timeline[2080].displacedIncome)).toBe(true);
   });
 
   it('pays 16 weeks of unemployment insurance and smooths purchasing power for one year', () => {

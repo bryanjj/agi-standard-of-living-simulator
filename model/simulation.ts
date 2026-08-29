@@ -2,6 +2,7 @@ import { calibration, housingCalibration } from '../calibration/usBaseline';
 import type { Household, SimulationResult, SimulationYear, Scenario } from './types';
 import type { PolicyIntervention } from './types';
 import { interventions } from '../scenarios/interventions';
+import { employmentIndexAtYear } from './employment';
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -28,9 +29,9 @@ export function simulate(scenario: Scenario, household: Household, intervention:
   const years: SimulationYear[] = [];
 
   for (let year = 0; year <= scenario.horizonYears; year += 1) {
-    const automation = clamp(year * calibration.automationPerYear.value, 0, 1);
-    const employment = 1 - automation;
-    const output = 1 + (calibration.yearTwentyOutputMultiple.value - 1) * automation ** 2;
+    const employment = employmentIndexAtYear(year);
+    const automation = 1 - employment;
+    const output = 1 + (calibration.maximumOutputMultiple.value - 1) * automation ** 2;
     const laborShare = calibration.baselineLaborShare.value * (1 - automation) ** calibration.laborShareCurveExponent.value;
     const nationalLaborIncomeIndex = (output * laborShare) / calibration.baselineLaborShare.value;
     const nationalCapitalIncomeIndex = (output * (1 - laborShare)) / (1 - calibration.baselineLaborShare.value);

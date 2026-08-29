@@ -4,7 +4,7 @@ Every external value or qualitative target is tagged as **DATA**, **PAPER**, **A
 
 ## Papers
 
-1. Anton Korinek and Donghyun Suh, [“Scenarios for the Transition to AGI”](https://www.nber.org/papers/w32255), NBER Working Paper 32255 (2024). Used for the 20-year scenario framing and qualitative transition behavior: automation can first raise wages, while bounded tasks and full automation can collapse labor income.
+1. Anton Korinek and Donghyun Suh, [“Scenarios for the Transition to AGI”](https://www.nber.org/papers/w32255), NBER Working Paper 32255 (2024). Used for qualitative transition behavior: automation can first raise wages, while bounded tasks and near-complete automation can collapse labor income. The logistic timing curve is a simulator assumption.
 2. Philip Trammell and Anton Korinek, [“Economic Growth under Transformative AI”](https://www.nber.org/papers/w31815), NBER Working Paper 31815 (2023; revised 2026). Used for qualitative limiting behavior: rapid output growth, falling labor share, rising capital importance, and irreproducible resource constraints.
 3. Ezra Karger et al., [“Forecasting the Economic Effects of AI”](https://www.nber.org/papers/w35046), NBER Working Paper 35046 (2026). Recorded as a future validation target. Its rapid-AI conditional medians are not silently copied into this first scenario.
 
