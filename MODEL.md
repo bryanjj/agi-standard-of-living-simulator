@@ -82,7 +82,7 @@ The household basket is a fixed-share Laspeyres-style index:
 
 It measures command over an equivalent material consumption basket, not nominal salary and not utility. Household size affects inferred baseline transfers; the index does not value leisure or household composition changes.
 
-The comparison chart places every quintile on a common scale with Q3 today equal to 100:
+The visible chart uses Q3 itself as the reference, so Q3 today equals 100. The comparison utility retains the ability to place other quintiles on this common scale later:
 
 `comparisonPurchasingPower(h,t) = standardOfLiving(h,t) × afterTaxResources(h,0) / afterTaxResources(Q3,0)`
 
@@ -102,10 +102,10 @@ The test suite fails if this identity or the factor/resource identities stop rec
 
 The comparison path is `100 × 1.01^t`. The 1% rate is an assumption, not a government forecast.
 
-## 9. Quintile presets
+## 9. Q3 reference household
 
-The five lines represent household-income fifths. Mean current-dollar incomes come from Census Historical Income Table H-3 for 2024: $18,460, $49,380, $84,390, $136,800, and $316,100.
+The visible reference household is Q3, the middle 20% of households by income. Its mean current-dollar income of $84,390 comes from Census Historical Income Table H-3 for 2024.
 
-Typical stock-equity holdings are calculated as survey-weighted medians from the Federal Reserve's 2022 SCF public summary extract using its `EQUITY` measure and income-percentile categories: $0, $0, $3,300, $22,750, and $257,050 in 2022 dollars. `EQUITY` captures direct and indirect stock holdings, including stock funds and equity held through retirement accounts. The fifth preset combines the SCF's 80–89.9 and 90–100 groups. Household-size proxies and modal housing tenure are calculated from the same records. Each value retains its provenance in `calibration/quintiles.ts`.
+Its typical stock-equity holding is the survey-weighted median of $3,300 from the Federal Reserve's 2022 SCF public summary extract using its `EQUITY` measure. `EQUITY` captures direct and indirect stock holdings, including stock funds and equity held through retirement accounts. The household-size proxy and modal housing tenure are calculated from the same records.
 
-Manual Advanced edits replace the selected quintile's household inputs while keeping its colored comparison line; selecting a quintile again restores the published preset.
+The other four quintile calibrations remain in `calibration/quintiles.ts` for later comparison views, but they are hidden in the current interface.

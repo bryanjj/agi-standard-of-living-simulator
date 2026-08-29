@@ -15,11 +15,10 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 
 ## What is included
 
-- Household income, size, stock equity, and housing inputs
-- Five source-backed U.S. income-quintile presets with a hidden manual editor
+- One source-backed Q3 middle-income reference household
 - Status quo policy path
 - Purchasing power and after-tax income normalized to Q3 today = 100
-- A five-line comparison chart with one color per quintile
+- Single Q3 purchasing-power and after-tax-income paths
 - No-AGI comparison path
 - Exact contribution decomposition
 - Labor / capital / government resource composition
