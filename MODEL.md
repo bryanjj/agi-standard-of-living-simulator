@@ -52,9 +52,11 @@ These are assumptions, not estimates from a tax microsimulation. They are delibe
 
 Because future capital income is proportional to current stock-equity holdings, a household with zero stock equity receives zero capital income. No equal AI dividend is assumed.
 
-`transfers(t) = transfers(0) + replacementRate × max(0, laborIncome(0) − laborIncome(t)) + equalDividend(t)`
+`transfers(t) = transfers(0) + longRunReplacementRate × max(0, laborIncome(0) − laborIncome(t)) + equalDividend(t)`
 
-The status-quo replacement rate is a 10% simplified current-law proxy; the expanded-safety-net intervention uses 35%. Effective tax rates are illustrative bands: 12% through $75,000, 18% through $200,000, and 24% above $200,000. Taxes apply to modeled gross resources.
+The status-quo long-run replacement rate is zero because regular unemployment insurance expires. The expanded-safety-net intervention uses 35%. Effective tax rates are illustrative bands: 12% through $75,000, 18% through $200,000, and 24% above $200,000. Taxes apply to modeled gross resources.
+
+Temporary unemployment insurance is modeled in the weekly worker paths rather than as a permanent annual transfer. After each job loss, it replaces 42.2% of the worker's wage for 16 weeks. The replacement rate is the Department of Labor's claimant-level average for calendar year 2025. Sixteen weeks is the rounded 15.74-week average duration in the regular program for the 12 months ending July 2026. State eligibility rules, benefit caps, and waiting periods are omitted.
 
 For dividend interventions:
 
@@ -96,7 +98,17 @@ The aggregate income index uses the same reference point before the modeled pric
 
 `afterTaxIncomeIndex(h,t) = 100 × afterTaxResources(h,t) / afterTaxResources(Q3,0)`
 
-That aggregate path is smooth because it averages displaced and employed workers. The visible income and purchasing-power charts use a fixed Monte Carlo sample of 1,000 comparable Q3 workers. Each worker starts employed with 95.9% probability. Every week, each still-employed worker faces the conditional displacement hazard required to match the smooth job-probability curve. Once displaced, a worker remains displaced. The worker receives the modeled remaining-worker wage until displacement. At displacement, labor income becomes zero and the household retains modeled stock income, baseline transfers, and the status-quo 10% labor-loss replacement. For legibility and rendering performance, workers displaced within the same four-week window are shown as one averaged display cohort whose opacity reflects its worker count.
+That aggregate path is smooth because it averages employed and unemployed workers. The visible income and purchasing-power charts use a fixed Monte Carlo sample of 1,000 comparable Q3 workers. Each worker starts employed with 95.9% probability. Employment is a renewable weekly state: an employed worker can lose work, and an unemployed worker can be rehired.
+
+The initial weekly reemployment probability is calibrated as `1 / 15.74`, or about 6.4%, using average compensated unemployment duration as a simple job-finding proxy. It declines with the target employment path:
+
+`reemploymentProbability(w) = (1 / 15.74) × jobProbability(w + 1) / 0.959`
+
+The weekly job-loss probability is solved so that expected employment continues to match the scenario curve:
+
+`jobLossProbability(w) = [p(w) + (1 − p(w)) × reemploymentProbability(w) − p(w + 1)] / p(w)`
+
+At year 20, both employment and reemployment reach zero. This is a reduced-form transition, not an occupation-level labor-market model. For rendering performance, the charts draw 250 representative paths; each path is weighted as four of the 1,000 simulated workers.
 
 Purchasing power does not fall immediately to the long-run displaced level. For a worker displaced in week `d`, the simulator records purchasing power just before displacement and applies a one-year transition buffer:
 
@@ -104,9 +116,9 @@ Purchasing power does not fall immediately to the long-run displaced level. For 
 
 `purchasingPower(w) = displacedPurchasingPower(w) + bufferRemaining(w) × [preDisplacementPurchasingPower − displacedPurchasingPower(w)]`
 
-This represents temporary unemployment benefits and savings drawdown. The 52-week period is a transparent simulator assumption, not an estimate of a Q3 household's liquid savings. The model does not treat this buffer as stock equity or give it AI-capital returns.
+This represents unemployment insurance and savings drawdown. Unemployment insurance is explicit in the income path; the additional consumption smoothing is a transparent simulator assumption, not an estimate of a Q3 household's liquid savings. Reemployment restores the employed purchasing-power path. A later job loss starts a new transition. The model does not treat this buffer as stock equity or give it AI-capital returns.
 
-The charts render weekly points rather than annual steps. Display cohorts are drawn with opacity based on their worker count. Where likely cohorts overlap, their color accumulates and makes more probable outcomes darker. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond initial employment and displacement timing.
+The charts render weekly points rather than annual steps. Representative paths are drawn with opacity based on the number of simulated workers they represent. Where likely paths overlap, their color accumulates and makes more probable outcomes darker. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond initial employment, job loss, and reemployment timing.
 
 ## 7. Exact decomposition
 

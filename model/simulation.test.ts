@@ -4,7 +4,7 @@ import type { Household } from './types';
 import { simulate } from './simulation';
 import { interventions } from '../scenarios/interventions';
 import { quintilePresets } from '../calibration/quintiles';
-import { aggregateHouseholdPaths, afterTaxIncomeIndex, purchasingPowerIndex, simulateHouseholdPaths, weeklyHouseholdOutcomes } from './comparison';
+import { afterTaxIncomeIndex, purchasingPowerIndex, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from './comparison';
 
 const household: Household = {
   annualIncome: 85_000,
@@ -103,39 +103,49 @@ describe('simulate', () => {
     }
   });
 
-  it('creates stable weekly Monte Carlo paths with one irreversible displacement', () => {
+  it('creates stable weekly paths with job loss and reemployment', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
-    const first = simulateHouseholdPaths(result, result, 100, 2026);
-    const second = simulateHouseholdPaths(result, result, 100, 2026);
+    const first = simulateHouseholdPaths(result, result, 1_000, 2026);
+    const second = simulateHouseholdPaths(result, result, 1_000, 2026);
     expect(first).toEqual(second);
-    expect(first).toHaveLength(100);
-    expect(first.every((path) => path.displacementWeek >= 0 && path.displacementWeek <= 1040)).toBe(true);
-    expect(first.every((path) => path.incomeValues.length === 1041 && path.purchasingPowerValues.length === 1041)).toBe(true);
+    expect(first).toHaveLength(1_000);
+    expect(first.every((path) => path.employmentValues.length === 1041 && path.incomeValues.length === 1041 && path.purchasingPowerValues.length === 1041)).toBe(true);
+    expect(first.some((path) => path.reemploymentWeeks.length > 0)).toBe(true);
+    expect(first.every((path) => path.reemploymentWeeks.every((week) => path.employmentValues[week]))).toBe(true);
+    const employedShare = (week: number) => first.filter((path) => path.employmentValues[week]).length / first.length;
+    expect(employedShare(0)).toBeCloseTo(0.959, 1);
+    expect(employedShare(520)).toBeCloseTo(0.4795, 1);
+    expect(employedShare(1040)).toBe(0);
     const timeline = weeklyHouseholdOutcomes(result, result);
-    expect(first.every((path) => path.incomeValues[1040] === timeline[1040].displacedIncome)).toBe(true);
+    expect(first.every((path) => path.incomeValues[1040] >= timeline[1040].displacedIncome)).toBe(true);
+    expect(first.some((path) => path.incomeValues[1040] > timeline[1040].displacedIncome)).toBe(true);
   });
 
-  it('drops income immediately but smooths purchasing power for one year', () => {
+  it('pays 16 weeks of unemployment insurance and smooths purchasing power for one year', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
     const timeline = weeklyHouseholdOutcomes(result, result);
-    const paths = simulateHouseholdPaths(result, result, 100, 8);
-    const path = paths.find((candidate) => candidate.displacementWeek > 0 && candidate.displacementWeek <= 988);
-    expect(path).toBeDefined();
-    if (!path) throw new Error('Expected a path displaced before the final year');
-    const week = path.displacementWeek;
-    expect(path.incomeValues[week]).toBeCloseTo(timeline[week].displacedIncome, 10);
+    const paths = simulateHouseholdPaths(result, result, 1_000, 8);
+    const match = paths.flatMap((path) => path.jobLossWeeks.map((week) => ({ path, week })))
+      .find(({ path, week }) => week <= 988 && path.employmentValues.slice(week, week + 53).every((employed) => !employed));
+    expect(match).toBeDefined();
+    if (!match) throw new Error('Expected an unemployment spell lasting at least one year');
+    const { path, week } = match;
+    const benefitIncrement = timeline[week - 1].temporaryUnemploymentIncome - timeline[week - 1].displacedIncome;
+    expect(path.incomeValues[week]).toBeCloseTo(timeline[week].displacedIncome + benefitIncrement, 10);
+    expect(path.incomeValues[week + 15]).toBeGreaterThan(timeline[week + 15].displacedIncome);
+    expect(path.incomeValues[week + 16]).toBeCloseTo(timeline[week + 16].displacedIncome, 10);
     expect(path.purchasingPowerValues[week]).toBeCloseTo(timeline[week - 1].employedPurchasingPower, 10);
     expect(path.purchasingPowerValues[week + 52]).toBeCloseTo(timeline[week + 52].displacedPurchasingPower, 10);
   });
 
-  it('combines 1,000 weekly worker paths into weighted four-week display cohorts', () => {
+  it('samples 1,000 workers into 250 weighted display paths', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
     const paths = simulateHouseholdPaths(result, result, 1_000, 8);
-    const cohorts = aggregateHouseholdPaths(paths, 4);
+    const displayed = sampleHouseholdPaths(paths, 250);
     expect(paths).toHaveLength(1_000);
-    expect(cohorts.reduce((sum, cohort) => sum + cohort.workerCount, 0)).toBe(1_000);
-    expect(cohorts.length).toBeLessThanOrEqual(261);
-    expect(cohorts.every((cohort) => cohort.incomeValues.length === 1041 && cohort.purchasingPowerValues.length === 1041)).toBe(true);
+    expect(displayed).toHaveLength(250);
+    expect(displayed.reduce((sum, path) => sum + path.workerCount, 0)).toBe(1_000);
+    expect(displayed.every((path) => path.workerCount === 4)).toBe(true);
   });
 
   it('makes interventions explicit and leaves status quo as the default', () => {

@@ -18,8 +18,20 @@ export const calibration = {
     note: 'Annual real income claim per dollar of stock and stock-fund equity.',
   },
   unemploymentReplacement: {
-    value: 0.1, provenance: 'ASSUMPTION', source: 'Simplified current-law fiscal proxy',
-    note: 'Ten percent of lost labor income is replaced; not a microsimulation of eligibility.',
+    value: 0.422, provenance: 'DATA', source: 'U.S. Department of Labor, Benefit Accuracy Measurement, calendar year 2025', year: 2025,
+    note: 'Claimant-level average weekly benefit replacement ratio; applied to the modeled worker wage during a benefit spell.',
+  },
+  unemploymentBenefitWeeks: {
+    value: 16, provenance: 'DATA', source: 'U.S. Department of Labor, regular UI dashboard, 12 months ending July 2026', year: 2026,
+    note: 'Rounded from the 15.74-week average duration in the regular unemployment insurance program.',
+  },
+  initialWeeklyReemploymentProbability: {
+    value: 1 / 15.74, provenance: 'ASSUMPTION', source: 'Calibration from U.S. Department of Labor average regular UI duration', year: 2026,
+    note: 'Uses the inverse of average compensated duration as a simple initial weekly job-finding proxy, then declines to zero with the scenario employment path.',
+  },
+  longRunLaborLossReplacement: {
+    value: 0, provenance: 'ASSUMPTION', source: 'Status-quo policy interpretation',
+    note: 'Regular unemployment insurance expires, so status quo provides no permanent wage-loss replacement after the temporary benefit spell.',
   },
   consumptionSmoothingWeeks: {
     value: 52, provenance: 'ASSUMPTION', source: 'Household transition-buffer calibration',

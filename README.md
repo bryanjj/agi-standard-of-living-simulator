@@ -20,7 +20,9 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 - One source-backed Q3 middle-income reference household
 - Status quo policy path
 - Purchasing power and after-tax income normalized to Q3 today = 100
-- Probability-density charts for 1,000 matched weekly employment, income, and purchasing-power paths, grouped into weighted four-week display cohorts
+- Probability-density charts for 1,000 matched weekly employment, income, and purchasing-power paths, shown through 250 weighted representative paths
+- Weekly job loss and reemployment, with the chance of finding work declining to zero in year 20
+- Unemployment insurance replacing 42.2% of worker wages for 16 weeks after each job loss
 - A 52-week purchasing-power transition buffer after job loss
 - No-AGI comparison path
 - Exact contribution decomposition

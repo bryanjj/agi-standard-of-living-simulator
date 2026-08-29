@@ -18,9 +18,13 @@ Federal Reserve Board, [2022 Survey of Consumer Finances public summary extract]
 
 U.S. Bureau of Labor Statistics, [CPS Latest Numbers](https://www.bls.gov/cps/latest-numbers.htm), July 2026. The seasonally adjusted unemployment rate was 4.1%, so the simulator starts a modeled labor-force participant with a 95.9% chance of employment. This is distinct from the 58.9% employment-to-population ratio.
 
+U.S. Department of Labor, [UI Replacement Rates Report](https://oui.doleta.gov/unemploy/ui_replacement_rates.asp), calendar year 2025. The claimant-level average replacement ratio was 42.2%. The simulator applies that rate to the modeled worker wage during each unemployment-insurance spell.
+
+U.S. Department of Labor, [Unemployment Insurance Data Dashboard](https://oui.doleta.gov/unemploy/DataDashboard.asp), 12 months ending July 2026. Average duration in the regular program was 15.74 weeks. The simulator rounds this to a 16-week benefit spell and uses its inverse as a simple initial weekly reemployment calibration.
+
 ## Assumptions
 
-All remaining values, including tax bands, benefit replacement, dividend shares, household income-composition inference, price pass-through, housing shares and hedges, the output curve, and the no-AGI path, are marked **ASSUMPTION** in code and listed in the UI. They are not presented as measured estimates.
+All remaining values, including tax bands, the reemployment calibration, long-run benefit treatment, dividend shares, household income-composition inference, price pass-through, housing shares and hedges, the output curve, and the no-AGI path, are marked **ASSUMPTION** in code and listed in the UI. They are not presented as measured estimates.
 
 ## Calculated values
 

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { calibration } from '../calibration/usBaseline';
 import { quintileById } from '../calibration/quintiles';
-import { aggregateHouseholdPaths, purchasingPowerOutcomes, purchasingPowerScale, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
+import { purchasingPowerOutcomes, purchasingPowerScale, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
 import { simulate } from '../model/simulation';
 import { interventions } from '../scenarios/interventions';
 import { transformative20Year } from '../scenarios/transformative20yr';
@@ -14,7 +14,7 @@ import { Term, TermNotes } from '../ui/Terms';
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const compactMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
 const round = (value: number) => Math.round(value);
-const cohortOpacity = (workerCount: number) => 1 - (1 - 0.003) ** workerCount;
+const pathOpacity = (workerCount: number) => 1 - (1 - 0.003) ** workerCount;
 
 function OutcomeTooltip({ active, label, payload, metric }: { active?: boolean; label?: number; payload?: Array<{ payload: Record<string, number> }>; metric: 'income' | 'purchasing power' }) {
   if (!active || !payload?.length) return null;
@@ -33,7 +33,7 @@ export default function Home() {
 
   const weeklyOutcomes = useMemo(() => weeklyHouseholdOutcomes(result, result), [result]);
   const simulatedHouseholdPaths = useMemo(() => simulateHouseholdPaths(result, result, 1_000, 8), [result]);
-  const displayedHouseholdPaths = useMemo(() => aggregateHouseholdPaths(simulatedHouseholdPaths, 4), [simulatedHouseholdPaths]);
+  const displayedHouseholdPaths = useMemo(() => sampleHouseholdPaths(simulatedHouseholdPaths, 250), [simulatedHouseholdPaths]);
   const chartData = useMemo(() => weeklyOutcomes.map((outcome, index) => ({
     year: outcome.year,
     baseline: 100 * (1 + calibration.baselineRealGrowth.value) ** outcome.year,
@@ -96,7 +96,7 @@ export default function Home() {
                     <Label value="Purchasing power · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                   </YAxis>
                   <Tooltip content={<OutcomeTooltip metric="purchasing power" />} />
-                  {displayedHouseholdPaths.map((path) => <Line key={`pp${path.id}`} type="linear" dataKey={`pp${path.id}`} name={`${path.workerCount} simulated workers`} stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={cohortOpacity(path.workerCount)} dot={false} activeDot={false} isAnimationActive={false} />)}
+                  {displayedHouseholdPaths.map((path) => <Line key={`pp${path.id}`} type="linear" dataKey={`pp${path.id}`} name={`${path.workerCount} simulated workers`} stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={pathOpacity(path.workerCount)} dot={false} activeDot={false} isAnimationActive={false} />)}
                   <Line type="monotone" dataKey="baseline" name="No-AGI baseline" stroke="#8b8d88" strokeWidth={1.25} strokeDasharray="5 5" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -111,14 +111,14 @@ export default function Home() {
               <div><span>YEAR 10</span><strong>{chanceEmployedAt(10).toFixed(1)}%</strong></div><i />
               <div><span>YEAR 20</span><strong>0%</strong></div>
             </div>
-            <p className="simulation-note chart-density-note">The 1,000 simulated workers use the same job histories as the income chart. Nearby displacement weeks are combined into four-week display cohorts, weighted by the number of workers in each cohort. After job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown.</p>
+            <p className="simulation-note chart-density-note">The 1,000 simulated workers use the same job histories as the income chart. The chart draws 250 representative paths, each weighted as four workers. After each job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown. Reemployment restores the employed path.</p>
           </section>
         </div>
 
         <section className="result-card income-chart-card">
           <div className="result-head">
-            <div><p className="section-label">1,000 SIMULATED WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">95.9% employed today</Term> · 0% in year 20</p></div>
-            <div className="displacement-callout"><strong>{round(displacedByYearTen)}%</strong><span>MODELED CHANCE<br />NOT EMPLOYED BY YEAR 10</span></div>
+            <div><p className="section-label">1,000 SIMULATED WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">Workers can return to work</Term> · 0% employed in year 20</p></div>
+            <div className="displacement-callout"><strong>{round(displacedByYearTen)}%</strong><span>MODELED CHANCE<br />NOT EMPLOYED AT YEAR 10</span></div>
           </div>
           <div className="chart-wrap income-chart" aria-label="After-tax income outcomes for one thousand simulated comparable Q3 workers over 20 years">
             <ResponsiveContainer width="100%" height="100%">
@@ -129,13 +129,13 @@ export default function Home() {
                   <Label value="After-tax income · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                 </YAxis>
                 <Tooltip content={<OutcomeTooltip metric="income" />} />
-                {displayedHouseholdPaths.map((path) => <Line key={path.id} type="linear" dataKey={path.id} name={`${path.workerCount} simulated workers`} stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={cohortOpacity(path.workerCount)} dot={false} activeDot={false} isAnimationActive={false} />)}
+                {displayedHouseholdPaths.map((path) => <Line key={path.id} type="linear" dataKey={path.id} name={`${path.workerCount} simulated workers`} stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={pathOpacity(path.workerCount)} dot={false} activeDot={false} isAnimationActive={false} />)}
               </LineChart>
             </ResponsiveContainer>
           </div>
           <div className="quintile-legend single-legend probability-legend income-legend"><span className="density-key"><i /> Darker = more likely</span></div>
           <div className="displacement-probabilities" aria-label="Chance of having a job"><span><small>TODAY</small><strong>{round(chanceEmployedAt(0))}%</strong></span><span><small>YEAR 5</small><strong>{round(chanceEmployedAt(5))}%</strong></span><span><small>YEAR 10</small><strong>{round(chanceEmployedAt(10))}%</strong></span><span><small>YEAR 15</small><strong>{round(chanceEmployedAt(15))}%</strong></span><span><small>YEAR 20</small><strong>0%</strong></span></div>
-          <p className="simulation-note">Each of the 1,000 simulated workers faces a new displacement draw every week while employed. The chart combines nearby displacement weeks into four-week display cohorts. The chance of employment declines smoothly from 95.9% today to 0% in year 20. Once displaced, a worker remains displaced. Labor income falls to $0; stock income and status-quo support keep total household income above $0.</p>
+          <p className="simulation-note">Each employed worker faces a weekly job-loss draw. An unemployed worker can find another job, but the weekly chance declines from 6.4% today to 0% in year 20. After each job loss, <Term note="unemploymentInsurance">unemployment insurance replaces 42.2% of the worker&apos;s wage for 16 weeks</Term>. Labor income then remains at $0 until reemployment; stock income and baseline government support can keep household income above $0.</p>
         </section>
       </section>
 
@@ -182,11 +182,12 @@ export default function Home() {
       <TermNotes />
 
       <section className="method-section">
-        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Sources and assumptions.</h2><p>The reference household uses Census Q3 mean household income. <Term note="equity">Stock equity</Term> and inferred household traits use the 2022 Survey of Consumer Finances. The initial <Term note="employmentProbability">chance of employment</Term> uses the latest BLS unemployment rate. The <Term note="consumptionSmoothing">transition buffer</Term> represents temporary benefits and savings without treating cash as AI capital. The displayed paths use the simplified status quo assumptions.</p></div>
+        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Sources and assumptions.</h2><p>The reference household uses Census Q3 mean household income. <Term note="equity">Stock equity</Term> and inferred household traits use the 2022 Survey of Consumer Finances. The initial <Term note="employmentProbability">chance of employment</Term> uses the latest BLS unemployment rate. <Term note="unemploymentInsurance">Unemployment insurance</Term> uses national Department of Labor averages. The <Term note="consumptionSmoothing">transition buffer</Term> also represents savings without treating cash as AI capital.</p></div>
         <div className="source-list">
           <a href="https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-income-households.html" target="_blank" rel="noreferrer"><span>DATA · 2024</span><strong>U.S. Census H-3</strong><small>Mean Q3 household income ↗</small></a>
           <a href="https://www.federalreserve.gov/econres/scfindex.htm" target="_blank" rel="noreferrer"><span>DATA · 2022</span><strong>Survey of Consumer Finances</strong><small>Median stock equity by income group ↗</small></a>
           <a href="https://www.bls.gov/cps/latest-numbers.htm" target="_blank" rel="noreferrer"><span>DATA · JUL 2026</span><strong>U.S. Bureau of Labor Statistics</strong><small>4.1% unemployment rate ↗</small></a>
+          <a href="https://oui.doleta.gov/unemploy/DataDashboard.asp" target="_blank" rel="noreferrer"><span>DATA · 2025/2026</span><strong>U.S. Department of Labor</strong><small>UI replacement and duration ↗</small></a>
           <a href="https://www.nber.org/papers/w32255" target="_blank" rel="noreferrer"><span>PAPER · 2024</span><strong>Korinek & Suh</strong><small>Automation, wages and the transition to AGI ↗</small></a>
           <a href="https://www.nber.org/papers/w31815" target="_blank" rel="noreferrer"><span>PAPER · 2023/2026</span><strong>Trammell & Korinek</strong><small>Growth, labor share and scarce resources ↗</small></a>
           <details><summary><span>ASSUMPTIONS</span><strong>Model calibration</strong><small>Inspect the values used here +</small></summary><ul>{Object.entries(calibration).filter(([key, item]) => item.provenance === 'ASSUMPTION' && !['expandedSafetyNetReplacement', 'citizenDividendShare', 'publicFundDividendShare'].includes(key)).map(([key, item]) => <li key={key}><b>{key.replace(/([A-Z])/g, ' $1')}</b><code>{item.value}</code><p>{item.note}</p></li>)}</ul></details>

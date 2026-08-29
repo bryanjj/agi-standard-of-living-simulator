@@ -20,18 +20,21 @@ export type IncomeOutcomes = {
   employmentProbability: number;
   displacementProbability: number;
   employed: number;
+  temporaryUnemployment: number;
   displaced: number;
   average: number;
 };
 
 export type SimulatedHouseholdPath = {
   id: string;
-  displacementWeek: number;
+  employmentValues: boolean[];
+  jobLossWeeks: number[];
+  reemploymentWeeks: number[];
   incomeValues: number[];
   purchasingPowerValues: number[];
 };
 
-export type SimulatedHouseholdCohort = SimulatedHouseholdPath & {
+export type DisplayedHouseholdPath = SimulatedHouseholdPath & {
   workerCount: number;
 };
 
@@ -40,8 +43,10 @@ export type WeeklyHouseholdOutcome = {
   employmentProbability: number;
   displacementProbability: number;
   employedIncome: number;
+  temporaryUnemploymentIncome: number;
   displacedIncome: number;
   employedPurchasingPower: number;
+  temporaryUnemploymentPurchasingPower: number;
   displacedPurchasingPower: number;
 };
 
@@ -58,7 +63,9 @@ export const incomeOutcomes = (result: SimulationResult, reference: SimulationRe
 
   const employedGross = baseline.laborIncome * year.wageIndex + year.capitalIncome + baseline.transfers + equalDividend;
   const displacedGross = year.capitalIncome + baseline.transfers + baseline.laborIncome * replacement + equalDividend;
+  const temporaryUnemploymentGross = displacedGross + baseline.laborIncome * year.wageIndex * calibration.unemploymentReplacement.value;
   const employed = afterTaxIndex(employedGross, reference);
+  const temporaryUnemployment = afterTaxIndex(temporaryUnemploymentGross, reference);
   const displaced = afterTaxIndex(displacedGross, reference);
   const employmentProbability = calibration.currentLaborForceEmploymentRate.value * (1 - year.automation);
   const displacementProbability = 1 - employmentProbability;
@@ -67,6 +74,7 @@ export const incomeOutcomes = (result: SimulationResult, reference: SimulationRe
     employmentProbability,
     displacementProbability,
     employed,
+    temporaryUnemployment,
     displaced,
     average: afterTaxIncomeIndex(result, reference, yearIndex),
   };
@@ -79,6 +87,7 @@ export const purchasingPowerOutcomes = (result: SimulationResult, reference: Sim
     employmentProbability: income.employmentProbability,
     displacementProbability: income.displacementProbability,
     employed: income.employed / basketPrice,
+    temporaryUnemployment: income.temporaryUnemployment / basketPrice,
     displaced: income.displaced / basketPrice,
     average: purchasingPowerIndex(result, reference, yearIndex),
   };
@@ -108,8 +117,10 @@ export const weeklyHouseholdOutcomes = (
       employmentProbability,
       displacementProbability: 1 - employmentProbability,
       employedIncome: interpolate(lowerIncome.employed, upperIncome.employed, fraction),
+      temporaryUnemploymentIncome: interpolate(lowerIncome.temporaryUnemployment, upperIncome.temporaryUnemployment, fraction),
       displacedIncome: interpolate(lowerIncome.displaced, upperIncome.displaced, fraction),
       employedPurchasingPower: interpolate(lowerPurchasingPower.employed, upperPurchasingPower.employed, fraction),
+      temporaryUnemploymentPurchasingPower: interpolate(lowerPurchasingPower.temporaryUnemployment, upperPurchasingPower.temporaryUnemployment, fraction),
       displacedPurchasingPower: interpolate(lowerPurchasingPower.displaced, upperPurchasingPower.displaced, fraction),
     };
   });
@@ -135,66 +146,91 @@ export const simulateHouseholdPaths = (
   const random = seededRandom(seed);
   const timeline = weeklyHouseholdOutcomes(result, reference);
   const totalWeeks = timeline.length - 1;
+  const startingEmploymentProbability = calibration.currentLaborForceEmploymentRate.value;
+  const transitions = timeline.slice(0, -1).map((outcome, week) => {
+    const nextEmploymentProbability = timeline[week + 1].employmentProbability;
+    const reemploymentProbability = calibration.initialWeeklyReemploymentProbability.value
+      * nextEmploymentProbability / startingEmploymentProbability;
+    const jobLossProbability = outcome.employmentProbability === 0 ? 1 : Math.min(1, Math.max(0,
+      (outcome.employmentProbability + outcome.displacementProbability * reemploymentProbability - nextEmploymentProbability)
+        / outcome.employmentProbability,
+    ));
+    return { jobLossProbability, reemploymentProbability };
+  });
 
   return Array.from({ length: count }, (_, index) => {
-    const initiallyEmployed = random() < calibration.currentLaborForceEmploymentRate.value;
-    let displacementWeek = initiallyEmployed ? totalWeeks : 0;
-    if (initiallyEmployed) {
-      for (let week = 0; week < totalWeeks; week += 1) {
-        const currentSurvival = 1 - week / totalWeeks;
-        const nextSurvival = 1 - (week + 1) / totalWeeks;
-        const weeklyRetentionProbability = currentSurvival === 0 ? 0 : nextSurvival / currentSurvival;
-        if (random() > weeklyRetentionProbability) {
-          displacementWeek = week + 1;
-          break;
+    let employed = random() < startingEmploymentProbability;
+    let weeksUnemployed = calibration.unemploymentBenefitWeeks.value;
+    let latestJobLossWeek = -1;
+    let benefitIncomeIncrement = 0;
+    let preLossPurchasingPower = timeline[0].employedPurchasingPower;
+    const employmentValues: boolean[] = [];
+    const jobLossWeeks: number[] = [];
+    const reemploymentWeeks: number[] = [];
+    const incomeValues: number[] = [];
+    const purchasingPowerValues: number[] = [];
+
+    for (let week = 0; week <= totalWeeks; week += 1) {
+      const outcome = timeline[week];
+      employmentValues.push(employed);
+      if (employed) {
+        incomeValues.push(outcome.employedIncome);
+        purchasingPowerValues.push(outcome.employedPurchasingPower);
+      } else {
+        const receivesUnemploymentInsurance = latestJobLossWeek >= 0
+          && weeksUnemployed < calibration.unemploymentBenefitWeeks.value;
+        incomeValues.push(outcome.displacedIncome + (receivesUnemploymentInsurance ? benefitIncomeIncrement : 0));
+        if (latestJobLossWeek < 0) {
+          purchasingPowerValues.push(outcome.displacedPurchasingPower);
+        } else {
+          const bufferRemaining = Math.max(0, 1 - weeksUnemployed / calibration.consumptionSmoothingWeeks.value);
+          purchasingPowerValues.push(outcome.displacedPurchasingPower
+            + bufferRemaining * (preLossPurchasingPower - outcome.displacedPurchasingPower));
         }
+      }
+
+      if (week === totalWeeks) continue;
+      const transition = transitions[week];
+      if (employed) {
+        if (random() < transition.jobLossProbability) {
+          employed = false;
+          weeksUnemployed = 0;
+          latestJobLossWeek = week + 1;
+          preLossPurchasingPower = outcome.employedPurchasingPower;
+          benefitIncomeIncrement = outcome.temporaryUnemploymentIncome - outcome.displacedIncome;
+          jobLossWeeks.push(week + 1);
+        }
+      } else if (random() < transition.reemploymentProbability) {
+        employed = true;
+        weeksUnemployed = 0;
+        reemploymentWeeks.push(week + 1);
+      } else {
+        weeksUnemployed += 1;
       }
     }
 
     return {
       id: `worker${index}`,
-      displacementWeek,
-      incomeValues: timeline.map((outcome, week) => week < displacementWeek ? outcome.employedIncome : outcome.displacedIncome),
-      purchasingPowerValues: timeline.map((outcome, week) => {
-        if (week < displacementWeek) return outcome.employedPurchasingPower;
-        if (displacementWeek === 0) return outcome.displacedPurchasingPower;
-        const weeksSinceDisplacement = week - displacementWeek;
-        const bufferRemaining = Math.max(0, 1 - weeksSinceDisplacement / calibration.consumptionSmoothingWeeks.value);
-        const preDisplacementPurchasingPower = timeline[displacementWeek - 1].employedPurchasingPower;
-        return outcome.displacedPurchasingPower + bufferRemaining * (preDisplacementPurchasingPower - outcome.displacedPurchasingPower);
-      }),
+      employmentValues,
+      jobLossWeeks,
+      reemploymentWeeks,
+      incomeValues,
+      purchasingPowerValues,
     };
   });
 };
 
-export const aggregateHouseholdPaths = (
+export const sampleHouseholdPaths = (
   paths: SimulatedHouseholdPath[],
-  weeksPerCohort = 4,
-): SimulatedHouseholdCohort[] => {
-  if (weeksPerCohort < 1) throw new Error('weeksPerCohort must be at least 1');
+  maxDisplayedPaths = 250,
+): DisplayedHouseholdPath[] => {
+  if (maxDisplayedPaths < 1) throw new Error('maxDisplayedPaths must be at least 1');
+  if (paths.length <= maxDisplayedPaths) return paths.map((path) => ({ ...path, workerCount: 1 }));
 
-  const groups = new Map<number, SimulatedHouseholdPath[]>();
-  for (const path of paths) {
-    const cohortKey = path.displacementWeek === 0
-      ? -1
-      : Math.floor((path.displacementWeek - 1) / weeksPerCohort);
-    const group = groups.get(cohortKey) ?? [];
-    group.push(path);
-    groups.set(cohortKey, group);
-  }
-
-  return [...groups.entries()]
-    .sort(([left], [right]) => left - right)
-    .map(([cohortKey, members]) => {
-      const averageAt = (values: 'incomeValues' | 'purchasingPowerValues', week: number) => (
-        members.reduce((sum, member) => sum + member[values][week], 0) / members.length
-      );
-      return {
-        id: `cohort${cohortKey}`,
-        displacementWeek: Math.round(members.reduce((sum, member) => sum + member.displacementWeek, 0) / members.length),
-        workerCount: members.length,
-        incomeValues: members[0].incomeValues.map((_, week) => averageAt('incomeValues', week)),
-        purchasingPowerValues: members[0].purchasingPowerValues.map((_, week) => averageAt('purchasingPowerValues', week)),
-      };
-    });
+  return Array.from({ length: maxDisplayedPaths }, (_, index) => {
+    const start = Math.floor(index * paths.length / maxDisplayedPaths);
+    const end = Math.floor((index + 1) * paths.length / maxDisplayedPaths);
+    const representative = paths[Math.floor((start + end - 1) / 2)];
+    return { ...representative, id: `sample${index}`, workerCount: end - start };
+  });
 };

@@ -28,7 +28,7 @@ const notes = {
   incomeIndex: {
     marker: 5,
     name: 'Modeled household income',
-    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each line is one fixed weekly Monte Carlo path. Labor income becomes zero after displacement; total household income can remain above zero because of stock income and government support. Darker overlapping paths indicate more likely outcomes.',
+    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each line is one fixed weekly Monte Carlo path. Labor income can stop after job loss and resume after reemployment. Darker overlapping paths indicate more likely outcomes.',
     sources: [],
   },
   noAgi: {
@@ -82,14 +82,23 @@ const notes = {
   employmentProbability: {
     marker: 13,
     name: 'Chance of employment',
-    definition: 'The initial 95.9% rate is one minus the July 2026 U.S. unemployment rate among the civilian labor force. The simulator then declines this probability smoothly to zero in year 20 and tests each still-employed path weekly. Once displaced, a worker remains displaced.',
+    definition: 'The initial 95.9% rate is one minus the July 2026 U.S. unemployment rate among the civilian labor force. The simulator declines this probability smoothly to zero in year 20. Employed workers can lose work and unemployed workers can be rehired, with the weekly reemployment probability also declining to zero.',
     sources: [{ label: 'U.S. Bureau of Labor Statistics', href: 'https://www.bls.gov/cps/latest-numbers.htm' }],
   },
   consumptionSmoothing: {
     marker: 14,
     name: 'Transition buffer',
-    definition: 'After job loss, the simulator holds purchasing power near its pre-loss level, then moves it linearly toward the lower long-run level over 52 weeks. This represents temporary unemployment benefits and savings drawdown without claiming a measured Q3 savings balance.',
+    definition: 'After each job loss, the simulator holds purchasing power near its pre-loss level, then moves it linearly toward the lower long-run level over 52 weeks. Unemployment insurance is explicit in the income path; the remaining buffer represents savings drawdown without claiming a measured Q3 savings balance.',
     sources: [],
+  },
+  unemploymentInsurance: {
+    marker: 15,
+    name: 'Unemployment insurance',
+    definition: 'After each modeled job loss, regular unemployment insurance replaces 42.2% of the worker wage for 16 weeks. The rate is the Department of Labor claimant-level average for 2025; 16 weeks rounds the 15.74-week average regular-program duration through July 2026. State eligibility rules and benefit caps are not modeled.',
+    sources: [
+      { label: 'DOL replacement rates', href: 'https://oui.doleta.gov/unemploy/ui_replacement_rates.asp' },
+      { label: 'DOL UI dashboard', href: 'https://oui.doleta.gov/unemploy/DataDashboard.asp' },
+    ],
   },
 } as const;
 
