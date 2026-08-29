@@ -4,19 +4,19 @@ This milestone is a transparent reduced-form household simulator, not a general-
 
 ## 1. Automation
 
-For year `t` from 0 to 20:
+For year `t` from 0 to 40:
 
 `automation(t) = min(1, 0.05 × t)`
 
 `employment(t) = 1 − automation(t)`
 
-This encodes the named scenario: five percentage points of the original workforce become automatable each year, no replacement jobs, and full automation in year 20.
+This encodes the named scenario: five percentage points of the original workforce become automatable each year, no replacement jobs, and full automation in year 20. The simulation continues through year 40 to show the post-transition path; automation remains at 100% after year 20.
 
 For the household Monte Carlo charts, the chance that a modeled worker has a job is separate from this normalized macro employment index:
 
-`jobProbability(t) = 0.959 × (1 − t / 20)`
+`jobProbability(t) = 0.959 × max(0, 1 − t / 20)`
 
-The 95.9% starting point is one minus the BLS July 2026 unemployment rate. It describes employment among the civilian labor force, not the employment-to-population ratio. The probability declines continuously to zero in year 20.
+The 95.9% starting point is one minus the BLS July 2026 unemployment rate. It describes employment among the civilian labor force, not the employment-to-population ratio. The probability declines continuously to zero in year 20 and remains at zero through year 40.
 
 ## 2. Output and factor shares
 

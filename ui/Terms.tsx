@@ -4,7 +4,7 @@ const notes = {
   agi: {
     marker: 1,
     name: 'Transformative AGI',
-    definition: 'A scenario in which AI can perform all tasks humans can perform. The 20-year path follows the bounded-task baseline scenario in Korinek and Suh.',
+    definition: 'A scenario in which AI can perform all tasks humans can perform. The transition reaches full automation in year 20, following the bounded-task baseline scenario in Korinek and Suh. The simulator continues through year 40 to show the aftermath.',
     sources: [{ label: 'Korinek & Suh', href: 'https://www.nber.org/papers/w32255' }],
   },
   quintile: {
@@ -82,7 +82,7 @@ const notes = {
   employmentProbability: {
     marker: 13,
     name: 'Chance of employment',
-    definition: 'The initial 95.9% rate is one minus the July 2026 U.S. unemployment rate among the civilian labor force. The simulator declines this probability smoothly to zero in year 20. Employed workers can lose work and unemployed workers can be rehired, with the weekly reemployment probability also declining to zero.',
+    definition: 'The initial 95.9% rate is one minus the July 2026 U.S. unemployment rate among the civilian labor force. The simulator declines this probability smoothly to zero in year 20, then holds it at zero through year 40. Employed workers can lose work and unemployed workers can be rehired before year 20, with the weekly reemployment probability also declining to zero.',
     sources: [{ label: 'U.S. Bureau of Labor Statistics', href: 'https://www.bls.gov/cps/latest-numbers.htm' }],
   },
   consumptionSmoothing: {

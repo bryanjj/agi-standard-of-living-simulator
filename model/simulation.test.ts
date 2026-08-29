@@ -98,9 +98,11 @@ describe('simulate', () => {
     expect(timeline[0].employmentProbability).toBeCloseTo(0.959, 10);
     expect(timeline[520].employmentProbability).toBeCloseTo(0.4795, 10);
     expect(timeline[1040].employmentProbability).toBe(0);
-    for (let week = 1; week < timeline.length; week += 1) {
+    expect(timeline[2080].employmentProbability).toBe(0);
+    for (let week = 1; week <= 1040; week += 1) {
       expect(timeline[week].employmentProbability).toBeLessThan(timeline[week - 1].employmentProbability);
     }
+    for (let week = 1041; week < timeline.length; week += 1) expect(timeline[week].employmentProbability).toBe(0);
   });
 
   it('creates stable weekly paths with job loss and reemployment', () => {
@@ -109,16 +111,18 @@ describe('simulate', () => {
     const second = simulateHouseholdPaths(result, result, 1_000, 2026);
     expect(first).toEqual(second);
     expect(first).toHaveLength(1_000);
-    expect(first.every((path) => path.employmentValues.length === 1041 && path.incomeValues.length === 1041 && path.purchasingPowerValues.length === 1041)).toBe(true);
+    expect(first.every((path) => path.employmentValues.length === 2081 && path.incomeValues.length === 2081 && path.purchasingPowerValues.length === 2081)).toBe(true);
     expect(first.some((path) => path.reemploymentWeeks.length > 0)).toBe(true);
     expect(first.every((path) => path.reemploymentWeeks.every((week) => path.employmentValues[week]))).toBe(true);
     const employedShare = (week: number) => first.filter((path) => path.employmentValues[week]).length / first.length;
     expect(employedShare(0)).toBeCloseTo(0.959, 1);
     expect(employedShare(520)).toBeCloseTo(0.4795, 1);
     expect(employedShare(1040)).toBe(0);
+    expect(employedShare(2080)).toBe(0);
     const timeline = weeklyHouseholdOutcomes(result, result);
     expect(first.every((path) => path.incomeValues[1040] >= timeline[1040].displacedIncome)).toBe(true);
     expect(first.some((path) => path.incomeValues[1040] > timeline[1040].displacedIncome)).toBe(true);
+    expect(first.every((path) => path.incomeValues[2080] === timeline[2080].displacedIncome)).toBe(true);
   });
 
   it('pays 16 weeks of unemployment insurance and smooths purchasing power for one year', () => {

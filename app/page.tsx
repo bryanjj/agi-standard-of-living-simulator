@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { calibration } from '../calibration/usBaseline';
 import { quintileById } from '../calibration/quintiles';
-import { purchasingPowerOutcomes, purchasingPowerScale, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
+import { employmentProbabilityAtYear, purchasingPowerOutcomes, purchasingPowerScale, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
 import { simulate } from '../model/simulation';
 import { interventions } from '../scenarios/interventions';
 import { transformative20Year } from '../scenarios/transformative20yr';
@@ -50,7 +50,7 @@ export default function Home() {
     displacedIncome: outcome.displacedIncome,
     ...Object.fromEntries(displayedHouseholdPaths.map((path) => [path.id, path.incomeValues[index]])),
   })), [weeklyOutcomes, displayedHouseholdPaths]);
-  const chanceEmployedAt = (year: number) => 100 * calibration.currentLaborForceEmploymentRate.value * (1 - year / result.scenario.horizonYears);
+  const chanceEmployedAt = (year: number) => 100 * employmentProbabilityAtYear(year);
   const displacedByYearTen = 100 - chanceEmployedAt(10);
 
   const focused = result.years[focusYear];
@@ -69,7 +69,7 @@ export default function Home() {
         <div className="intro">
           <p className="eyebrow"><Term note="agi">AGI</Term> STANDARD OF LIVING SIMULATOR</p>
           <h1>How would <Term note="agi">AGI</Term> change<br />your <em>standard of living?</em></h1>
-          <p className="lede">Follow a middle-income U.S. household through a 20-year AGI transition.</p>
+          <p className="lede">Follow a middle-income U.S. household across a 40-year window around a 20-year AGI transition.</p>
           <div className="scenario-pill"><span>SCENARIO</span><strong><Term note="agi">20-Year Transformative AGI</Term></strong><small>{intervention.name} · {intervention.shortDescription}</small></div>
         </div>
 
@@ -87,11 +87,11 @@ export default function Home() {
               <div><p className="section-label"><span>02</span> 1,000 SIMULATED WORKERS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Darker paths are more likely · <Term note="consumptionSmoothing">52-week buffer</Term></p></div>
               <div className="outcome" style={{ color: referencePreset.color }}><strong>{calibration.consumptionSmoothingWeeks.value}</strong><span>WEEK TRANSITION<br />AFTER JOB LOSS</span></div>
             </div>
-            <div className="chart-wrap comparison-chart" aria-label="Purchasing-power outcomes for one thousand simulated comparable Q3 workers over 20 years">
+            <div className="chart-wrap comparison-chart" aria-label="Purchasing-power outcomes for one thousand simulated comparable Q3 workers over 40 years">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 12, right: 16, bottom: 3, left: 54 }}>
                   <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
-                  <XAxis type="number" dataKey="year" domain={[0,20]} ticks={[0,5,10,15,20]} tickFormatter={(v) => v === 0 ? 'Today' : `Yr ${v}`} axisLine={false} tickLine={false} />
+                  <XAxis type="number" dataKey="year" domain={[0,40]} ticks={[0,10,20,30,40]} tickFormatter={(v) => v === 0 ? 'Today' : `Yr ${v}`} axisLine={false} tickLine={false} />
                   <YAxis domain={['auto','auto']} axisLine={false} tickLine={false} width={42}>
                     <Label value="Purchasing power · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                   </YAxis>
@@ -107,9 +107,9 @@ export default function Home() {
             </div>
             <div className="milestones selected-milestones">
               <div><span>EMPLOYED TODAY</span><strong>{chanceEmployedAt(0).toFixed(1)}%</strong></div><i />
-              <div><span>YEAR 5</span><strong>{chanceEmployedAt(5).toFixed(1)}%</strong></div><i />
               <div><span>YEAR 10</span><strong>{chanceEmployedAt(10).toFixed(1)}%</strong></div><i />
-              <div><span>YEAR 20</span><strong>0%</strong></div>
+              <div><span>YEAR 20</span><strong>0%</strong></div><i />
+              <div><span>YEAR 40</span><strong>0%</strong></div>
             </div>
             <p className="simulation-note chart-density-note">The 1,000 simulated workers use the same job histories as the income chart. The chart draws 250 representative paths, each weighted as four workers. After each job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown. Reemployment restores the employed path.</p>
           </section>
@@ -120,11 +120,11 @@ export default function Home() {
             <div><p className="section-label">1,000 SIMULATED WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">Workers can return to work</Term> · 0% employed in year 20</p></div>
             <div className="displacement-callout"><strong>{round(displacedByYearTen)}%</strong><span>MODELED CHANCE<br />NOT EMPLOYED AT YEAR 10</span></div>
           </div>
-          <div className="chart-wrap income-chart" aria-label="After-tax income outcomes for one thousand simulated comparable Q3 workers over 20 years">
+          <div className="chart-wrap income-chart" aria-label="After-tax income outcomes for one thousand simulated comparable Q3 workers over 40 years">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={incomeChartData} margin={{ top: 12, right: 16, bottom: 3, left: 54 }}>
                 <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
-                <XAxis type="number" dataKey="year" domain={[0,20]} ticks={[0,5,10,15,20]} tickFormatter={(v) => v === 0 ? 'Today' : `Yr ${v}`} axisLine={false} tickLine={false} />
+                <XAxis type="number" dataKey="year" domain={[0,40]} ticks={[0,10,20,30,40]} tickFormatter={(v) => v === 0 ? 'Today' : `Yr ${v}`} axisLine={false} tickLine={false} />
                 <YAxis domain={['auto','auto']} axisLine={false} tickLine={false} width={42}>
                   <Label value="After-tax income · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                 </YAxis>
@@ -134,7 +134,7 @@ export default function Home() {
             </ResponsiveContainer>
           </div>
           <div className="quintile-legend single-legend probability-legend income-legend"><span className="density-key"><i /> Darker = more likely</span></div>
-          <div className="displacement-probabilities" aria-label="Chance of having a job"><span><small>TODAY</small><strong>{round(chanceEmployedAt(0))}%</strong></span><span><small>YEAR 5</small><strong>{round(chanceEmployedAt(5))}%</strong></span><span><small>YEAR 10</small><strong>{round(chanceEmployedAt(10))}%</strong></span><span><small>YEAR 15</small><strong>{round(chanceEmployedAt(15))}%</strong></span><span><small>YEAR 20</small><strong>0%</strong></span></div>
+          <div className="displacement-probabilities" aria-label="Chance of having a job"><span><small>TODAY</small><strong>{round(chanceEmployedAt(0))}%</strong></span><span><small>YEAR 10</small><strong>{round(chanceEmployedAt(10))}%</strong></span><span><small>YEAR 20</small><strong>0%</strong></span><span><small>YEAR 30</small><strong>0%</strong></span><span><small>YEAR 40</small><strong>0%</strong></span></div>
           <p className="simulation-note">Each employed worker faces a weekly job-loss draw. An unemployed worker can find another job, but the weekly chance declines from 6.4% today to 0% in year 20. After each job loss, <Term note="unemploymentInsurance">unemployment insurance replaces 42.2% of the worker&apos;s wage for 16 weeks</Term>. Labor income then remains at $0 until reemployment; stock income and baseline government support can keep household income above $0.</p>
         </section>
       </section>
@@ -152,7 +152,7 @@ export default function Home() {
       <section className="analysis-section dark-section">
         <div className="section-intro">
           <div><p className="eyebrow">AGGREGATE Q3 AVERAGE</p><h2>Breakdown.</h2></div>
-          <div className="year-tabs" aria-label="Explanation year">{[5,10,20].map((year) => <button className={focusYear === year ? 'active' : ''} key={year} onClick={() => setFocusYear(year)}>Year {year}</button>)}</div>
+          <div className="year-tabs" aria-label="Explanation year">{[5,10,20,40].map((year) => <button className={focusYear === year ? 'active' : ''} key={year} onClick={() => setFocusYear(year)}>Year {year}</button>)}</div>
         </div>
         <div className="two-col">
           <div><p className="panel-kicker">CONTRIBUTION TO THE INDEX</p><WhyChart year={focused} scale={selectedScale} /></div>

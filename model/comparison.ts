@@ -16,6 +16,11 @@ export const purchasingPowerScale = (result: SimulationResult, reference: Simula
   afterTaxResources(result.years[0]) / afterTaxResources(reference.years[0])
 );
 
+export const employmentProbabilityAtYear = (year: number) => (
+  calibration.currentLaborForceEmploymentRate.value
+    * (1 - Math.min(1, Math.max(0, year) * calibration.automationPerYear.value))
+);
+
 export type IncomeOutcomes = {
   employmentProbability: number;
   displacementProbability: number;
@@ -110,7 +115,7 @@ export const weeklyHouseholdOutcomes = (
     const upperIncome = incomeOutcomes(result, reference, upperIndex);
     const lowerPurchasingPower = purchasingPowerOutcomes(result, reference, lowerIndex);
     const upperPurchasingPower = purchasingPowerOutcomes(result, reference, upperIndex);
-    const employmentProbability = calibration.currentLaborForceEmploymentRate.value * (1 - week / totalWeeks);
+    const employmentProbability = employmentProbabilityAtYear(year);
 
     return {
       year,

@@ -4,5 +4,5 @@ export const transformative20Year: Scenario = {
   id: 'transformative-20-status-quo',
   name: '20-Year Transformative AGI',
   policy: 'No new policy',
-  horizonYears: 20,
+  horizonYears: 40,
 };
