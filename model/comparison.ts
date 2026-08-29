@@ -23,10 +23,11 @@ export type IncomeOutcomes = {
   median: number;
 };
 
-export type SimulatedIncomePath = {
+export type SimulatedHouseholdPath = {
   id: string;
   displacementYear: number;
-  values: number[];
+  incomeValues: number[];
+  purchasingPowerValues: number[];
 };
 
 const afterTaxIndex = (grossResources: number, reference: SimulationResult) => (
@@ -55,6 +56,18 @@ export const incomeOutcomes = (result: SimulationResult, reference: SimulationRe
   };
 };
 
+export const purchasingPowerOutcomes = (result: SimulationResult, reference: SimulationResult, yearIndex: number): IncomeOutcomes => {
+  const income = incomeOutcomes(result, reference, yearIndex);
+  const basketPrice = result.years[yearIndex].prices.householdBasket;
+  return {
+    displacementProbability: income.displacementProbability,
+    employed: income.employed / basketPrice,
+    displaced: income.displaced / basketPrice,
+    average: purchasingPowerIndex(result, reference, yearIndex),
+    median: income.median / basketPrice,
+  };
+};
+
 const seededRandom = (initialSeed: number) => {
   let seed = initialSeed;
   return () => {
@@ -66,24 +79,28 @@ const seededRandom = (initialSeed: number) => {
   };
 };
 
-export const simulateIncomePaths = (
+export const simulateHouseholdPaths = (
   result: SimulationResult,
   reference: SimulationResult,
   count = 100,
   seed = 2026,
-): SimulatedIncomePath[] => {
+): SimulatedHouseholdPath[] => {
   const random = seededRandom(seed);
-  const outcomes = result.years.map((_, index) => incomeOutcomes(result, reference, index));
+  const income = result.years.map((_, index) => incomeOutcomes(result, reference, index));
+  const purchasingPower = result.years.map((_, index) => purchasingPowerOutcomes(result, reference, index));
 
   return Array.from({ length: count }, (_, index) => {
     const draw = random();
-    const displacementIndex = outcomes.findIndex((outcome) => outcome.displacementProbability >= draw);
+    const displacementIndex = income.findIndex((outcome) => outcome.displacementProbability >= draw);
     const displacementYear = displacementIndex < 0 ? result.years.length : result.years[displacementIndex].year;
 
     return {
       id: `worker${index}`,
       displacementYear,
-      values: outcomes.map((outcome, yearIndex) => (
+      incomeValues: income.map((outcome, yearIndex) => (
+        result.years[yearIndex].year < displacementYear ? outcome.employed : outcome.displaced
+      )),
+      purchasingPowerValues: purchasingPower.map((outcome, yearIndex) => (
         result.years[yearIndex].year < displacementYear ? outcome.employed : outcome.displaced
       )),
     };

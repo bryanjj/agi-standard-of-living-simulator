@@ -22,13 +22,13 @@ const notes = {
   purchasingPower: {
     marker: 4,
     name: 'Material purchasing power',
-    definition: 'The simulator’s after-tax household resources divided by its modeled basket price. Q3 today is set to 100 and every other value is relative to that benchmark. This is a simulator definition.',
+    definition: 'The simulator’s after-tax household resources divided by its modeled basket price. Q3 today is set to 100. Each path applies the modeled prices to one simulated worker’s income path, and darker overlapping paths indicate more likely outcomes.',
     sources: [],
   },
   incomeIndex: {
     marker: 5,
     name: 'Modeled household income',
-    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each faint line is a fixed Monte Carlo draw of a worker’s displacement year. Labor income becomes zero after displacement; total household income can remain above zero because of stock income and government support.',
+    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each line is a fixed Monte Carlo draw of a worker’s displacement year. Labor income becomes zero after displacement; total household income can remain above zero because of stock income and government support. Darker overlapping paths indicate more likely outcomes.',
     sources: [],
   },
   noAgi: {

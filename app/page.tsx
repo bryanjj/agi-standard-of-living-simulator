@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { calibration } from '../calibration/usBaseline';
 import { quintileById } from '../calibration/quintiles';
-import { incomeOutcomes, purchasingPowerIndex, purchasingPowerScale, simulateIncomePaths } from '../model/comparison';
+import { incomeOutcomes, purchasingPowerOutcomes, purchasingPowerScale, simulateHouseholdPaths } from '../model/comparison';
 import { simulate } from '../model/simulation';
 import { interventions } from '../scenarios/interventions';
 import { transformative20Year } from '../scenarios/transformative20yr';
@@ -15,10 +15,11 @@ const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD
 const compactMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
 const round = (value: number) => Math.round(value);
 
-function IncomeTooltip({ active, label, payload }: { active?: boolean; label?: number; payload?: Array<{ payload: Record<string, number> }> }) {
+function OutcomeTooltip({ active, label, payload, metric }: { active?: boolean; label?: number; payload?: Array<{ payload: Record<string, number> }>; metric: 'income' | 'purchasing power' }) {
   if (!active || !payload?.length) return null;
   const datum = payload[0].payload;
-  return <div className="income-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${label}`}</small><strong>{round(datum.medianIncome)}</strong><span>Median income index</span><b>{round(datum.displacedChance)}% chance displaced</b></div>;
+  const value = metric === 'income' ? datum.medianIncome : datum.medianPurchasingPower;
+  return <div className="income-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${label}`}</small><strong>{round(value)}</strong><span>Median {metric} index</span><b>{round(datum.displacedChance)}% chance displaced</b></div>;
 }
 
 export default function Home() {
@@ -27,31 +28,36 @@ export default function Home() {
   const referencePreset = quintileById.q3;
   const result = useMemo(() => simulate(transformative20Year, referencePreset.household, intervention), [intervention, referencePreset]);
 
-  const chartData = useMemo(() => result.years.map((year, index) => ({
-    year: year.year,
-    baseline: year.noAgiBaseline,
-    purchasingPower: purchasingPowerIndex(result, result, index),
-  })), [result]);
+  const simulatedHouseholdPaths = useMemo(() => simulateHouseholdPaths(result, result, 100, 8), [result]);
+  const chartData = useMemo(() => result.years.map((year, index) => {
+    const outcome = purchasingPowerOutcomes(result, result, index);
+    return {
+      year: year.year,
+      baseline: year.noAgiBaseline,
+      medianPurchasingPower: outcome.median,
+      displacedChance: outcome.displacementProbability * 100,
+      ...Object.fromEntries(simulatedHouseholdPaths.map((path) => [`pp${path.id}`, path.purchasingPowerValues[index]])),
+    };
+  }), [result, simulatedHouseholdPaths]);
 
-  const simulatedIncomePaths = useMemo(() => simulateIncomePaths(result, result, 100, 8), [result]);
   const incomeChartData = useMemo(() => result.years.map((year, index) => {
     const outcome = incomeOutcomes(result, result, index);
     return {
       year: year.year,
       medianIncome: outcome.median,
       displacedChance: outcome.displacementProbability * 100,
-      ...Object.fromEntries(simulatedIncomePaths.map((path) => [path.id, path.values[index]])),
+      ...Object.fromEntries(simulatedHouseholdPaths.map((path) => [path.id, path.incomeValues[index]])),
     };
-  }), [result, simulatedIncomePaths]);
-  const displacedByYearTen = simulatedIncomePaths.filter((path) => path.displacementYear <= 10).length;
+  }), [result, simulatedHouseholdPaths]);
+  const displacedByYearTen = simulatedHouseholdPaths.filter((path) => path.displacementYear <= 10).length;
 
   const focused = result.years[focusYear];
   const selectedScale = purchasingPowerScale(result, result);
-  const selectedToday = purchasingPowerIndex(result, result, 0);
-  const selectedY5 = purchasingPowerIndex(result, result, 5);
-  const selectedY10 = purchasingPowerIndex(result, result, 10);
-  const selectedY20 = purchasingPowerIndex(result, result, 20);
-  const focusedPurchasingPower = purchasingPowerIndex(result, result, focusYear);
+  const selectedToday = purchasingPowerOutcomes(result, result, 0).median;
+  const selectedY5 = purchasingPowerOutcomes(result, result, 5).median;
+  const selectedY10 = purchasingPowerOutcomes(result, result, 10).median;
+  const selectedY20 = purchasingPowerOutcomes(result, result, 20).median;
+  const focusedPurchasingPower = purchasingPowerOutcomes(result, result, focusYear).average;
   const focusedChange = focusedPurchasingPower - selectedToday;
 
   return (
@@ -80,10 +86,10 @@ export default function Home() {
         <div className="workspace single-workspace">
           <section className="result-card comparison-card">
             <div className="result-head">
-              <div><p className="section-label"><span>02</span> MIDDLE-INCOME HOUSEHOLD PATH</p><h2><Term note="purchasingPower">Purchasing power</Term></h2><p className="axis-definition">Q3 today = 100</p></div>
+              <div><p className="section-label"><span>02</span> 100 SIMULATED Q3 WORKERS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Darker paths are more likely</p></div>
               <div className="outcome" style={{ color: referencePreset.color }}><strong>{round(selectedY20)}</strong><span>Q3 · YEAR 20<br />Q3 TODAY = 100</span></div>
             </div>
-            <div className="chart-wrap comparison-chart" aria-label="Purchasing power for a Q3 middle-income U.S. household over 20 years">
+            <div className="chart-wrap comparison-chart" aria-label="One hundred simulated purchasing-power paths for comparable Q3 workers over 20 years">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 12, right: 16, bottom: 3, left: 54 }}>
                   <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
@@ -91,14 +97,16 @@ export default function Home() {
                   <YAxis domain={['auto','auto']} axisLine={false} tickLine={false} width={42}>
                     <Label value="Purchasing power · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                   </YAxis>
-                  <Tooltip formatter={(value, name) => [round(Number(value)), name]} labelFormatter={(v) => v === 0 ? 'Today' : `Year ${v}`} />
-                  <Line type="monotone" dataKey="purchasingPower" name="Q3 · Middle 20%" stroke={referencePreset.color} strokeWidth={4} dot={false} activeDot={{ r: 5 }} />
+                  <Tooltip content={<OutcomeTooltip metric="purchasing power" />} />
+                  {simulatedHouseholdPaths.map((path) => <Line key={`pp${path.id}`} type="stepAfter" dataKey={`pp${path.id}`} name="Simulated worker" stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={0.028} dot={false} activeDot={false} isAnimationActive={false} />)}
                   <Line type="monotone" dataKey="baseline" name="No-AGI baseline" stroke="#8b8d88" strokeWidth={1.25} strokeDasharray="5 5" dot={false} />
+                  <Line type="stepAfter" dataKey="medianPurchasingPower" name="Median outcome" stroke="#222720" strokeWidth={3.5} dot={false} activeDot={{ r: 5 }} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <div className="quintile-legend single-legend">
-              <span className="q3-key"><i style={{ background: referencePreset.color }} /> Q3 household</span>
+            <div className="quintile-legend single-legend probability-legend">
+              <span className="density-key"><i /> Darker = more likely</span>
+              <span className="median-key"><i /> Median outcome</span>
               <span><i /> <Term note="noAgi">No-AGI baseline</Term></span>
             </div>
             <div className="milestones selected-milestones">
@@ -107,6 +115,7 @@ export default function Home() {
               <div><span>YEAR 10</span><strong>{round(selectedY10)}</strong></div><i />
               <div><span>YEAR 20</span><strong>{round(selectedY20)}</strong></div>
             </div>
+            <p className="simulation-note chart-density-note">The 100 paths use the same worker displacement draws as the income chart. Overlapping paths accumulate color.</p>
           </section>
         </div>
 
@@ -123,15 +132,15 @@ export default function Home() {
                 <YAxis domain={['auto','auto']} axisLine={false} tickLine={false} width={42}>
                   <Label value="After-tax income · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                 </YAxis>
-                <Tooltip content={<IncomeTooltip />} />
-                {simulatedIncomePaths.map((path) => <Line key={path.id} type="stepAfter" dataKey={path.id} name="Simulated worker" stroke="#8b8065" strokeWidth={0.8} strokeOpacity={0.12} dot={false} activeDot={false} isAnimationActive={false} />)}
-                <Line type="stepAfter" dataKey="medianIncome" name="Median outcome" stroke={referencePreset.color} strokeWidth={4} dot={false} activeDot={{ r: 5 }} isAnimationActive={false} />
+                <Tooltip content={<OutcomeTooltip metric="income" />} />
+                {simulatedHouseholdPaths.map((path) => <Line key={path.id} type="stepAfter" dataKey={path.id} name="Simulated worker" stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={0.028} dot={false} activeDot={false} isAnimationActive={false} />)}
+                <Line type="stepAfter" dataKey="medianIncome" name="Median outcome" stroke="#222720" strokeWidth={3.5} dot={false} activeDot={{ r: 5 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <div className="quintile-legend single-legend income-legend"><span className="sample-key"><i /> Simulated workers</span><span className="q3-key"><i style={{ background: referencePreset.color }} /> Median outcome</span></div>
+          <div className="quintile-legend single-legend probability-legend income-legend"><span className="density-key"><i /> Darker = more likely</span><span className="median-key"><i /> Median outcome</span></div>
           <div className="displacement-probabilities" aria-label="Cumulative chance of displacement"><span><small>TODAY</small><strong>0%</strong></span><span><small>YEAR 5</small><strong>25%</strong></span><span><small>YEAR 10</small><strong>50%</strong></span><span><small>YEAR 15</small><strong>75%</strong></span><span><small>YEAR 20</small><strong>100%</strong></span></div>
-          <p className="simulation-note">Each faint line is one simulated worker. The scenario displaces 5% of the original workers each year. Labor income drops to $0 at displacement; stock income and status-quo support keep total household income above $0.</p>
+          <p className="simulation-note">Each line is one simulated worker. Overlapping lines accumulate color, so darker paths represent more workers. The scenario displaces 5% of the original workers each year. Labor income drops to $0 at displacement; stock income and status-quo support keep total household income above $0.</p>
         </section>
       </section>
 
@@ -147,12 +156,12 @@ export default function Home() {
 
       <section className="analysis-section dark-section">
         <div className="section-intro">
-          <div><p className="eyebrow">WHY DOES Q3 CHANGE?</p><h2>Breakdown.</h2></div>
+          <div><p className="eyebrow">AGGREGATE Q3 AVERAGE</p><h2>Breakdown.</h2></div>
           <div className="year-tabs" aria-label="Explanation year">{[5,10,20].map((year) => <button className={focusYear === year ? 'active' : ''} key={year} onClick={() => setFocusYear(year)}>Year {year}</button>)}</div>
         </div>
         <div className="two-col">
           <div><p className="panel-kicker">CONTRIBUTION TO THE INDEX</p><WhyChart year={focused} scale={selectedScale} /></div>
-          <div className="narrative-card"><small>{intervention.name.toUpperCase()}</small><h3>{focused.standardOfLiving >= 100 ? 'Abundance outweighs lost labor income.' : 'Lost labor income outweighs abundance.'}</h3><p>By year {focusYear}, <Term note="automation">{Math.round(focused.automation * 100)}% of original work is automatable</Term>. {intervention.description} <Term note="scarceFactors">Irreproducible scarce factors</Term> remain constrained while <Term note="reproducible">reproducible goods</Term> get cheaper.</p><strong>{Math.round(focusedChange) >= 0 ? '+' : ''}{Math.round(focusedChange)} points</strong><span>change from Q3 today</span></div>
+          <div className="narrative-card"><small>{intervention.name.toUpperCase()}</small><h3>{focused.standardOfLiving >= 100 ? 'Abundance outweighs lost labor income.' : 'Lost labor income outweighs abundance.'}</h3><p>This section explains the average across all paths. By year {focusYear}, <Term note="automation">{Math.round(focused.automation * 100)}% of original work is automatable</Term>. {intervention.description} <Term note="scarceFactors">Irreproducible scarce factors</Term> remain constrained while <Term note="reproducible">reproducible goods</Term> get cheaper.</p><strong>{Math.round(focusedChange) >= 0 ? '+' : ''}{Math.round(focusedChange)} points</strong><span>average change from Q3 today</span></div>
         </div>
       </section>
 

@@ -4,7 +4,7 @@ import type { Household } from './types';
 import { simulate } from './simulation';
 import { interventions } from '../scenarios/interventions';
 import { quintilePresets } from '../calibration/quintiles';
-import { afterTaxIncomeIndex, incomeOutcomes, purchasingPowerIndex, simulateIncomePaths } from './comparison';
+import { afterTaxIncomeIndex, incomeOutcomes, purchasingPowerIndex, purchasingPowerOutcomes, simulateHouseholdPaths } from './comparison';
 
 const household: Household = {
   annualIncome: 85_000,
@@ -105,11 +105,20 @@ describe('simulate', () => {
 
   it('creates stable Monte Carlo paths with one abrupt displacement year each', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
-    const first = simulateIncomePaths(result, result, 100, 2026);
-    const second = simulateIncomePaths(result, result, 100, 2026);
+    const first = simulateHouseholdPaths(result, result, 100, 2026);
+    const second = simulateHouseholdPaths(result, result, 100, 2026);
     expect(first).toEqual(second);
     expect(first).toHaveLength(100);
     expect(first.every((path) => path.displacementYear >= 1 && path.displacementYear <= 20)).toBe(true);
+  });
+
+  it('applies the same sampled displacement timing to income and purchasing power', () => {
+    const result = simulate(transformative20Year, quintilePresets[2].household);
+    const paths = simulateHouseholdPaths(result, result, 100, 8);
+    const path = paths[0];
+    const year = path.displacementYear;
+    expect(path.incomeValues[year]).toBeCloseTo(incomeOutcomes(result, result, year).displaced, 10);
+    expect(path.purchasingPowerValues[year]).toBeCloseTo(purchasingPowerOutcomes(result, result, year).displaced, 10);
   });
 
   it('makes interventions explicit and leaves status quo as the default', () => {
