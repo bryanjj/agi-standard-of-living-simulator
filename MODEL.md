@@ -58,7 +58,7 @@ For dividend interventions:
 
 The citizen-dividend share is 10% and the public-fund share is 30%. The same dollar dividend is paid to every modeled household. These shares and the policy mechanisms are assumptions, not current law.
 
-## 5. Two-good prices
+## 5. Reproducible goods and irreproducible scarce factors
 
 The reproducible-good price index is:
 
@@ -70,7 +70,7 @@ Before a housing-ownership hedge:
 
 `rawScarcePrice(t) = 1 + 0.6 × (output(t)^(1/3) − 1)`
 
-Renters receive no hedge, mortgaged owners a 45% hedge, and outright owners an 80% hedge. Modeled scarce-good budget shares are 32%, 30%, and 18%, respectively. These are milestone-one assumptions.
+“Irreproducible scarce factors” follows Korinek and Suh; Trammell and Korinek likewise analyze fixed factors such as land and natural resources. To connect that macroeconomic concept to households, the simulator uses housing exposure as a proxy: renters receive no hedge, mortgaged owners a 45% hedge, and outright owners an 80% hedge. Modeled budget shares are 32%, 30%, and 18%, respectively. The housing proxy, shares, and hedges are milestone-one assumptions, not values taken from the papers.
 
 The household basket is a fixed-share Laspeyres-style index:
 
@@ -84,7 +84,7 @@ It measures command over an equivalent material consumption basket, not nominal 
 
 ## 7. Exact decomposition
 
-Labor, capital, transfers, and tax contributions are their after-tax-resource changes, each divided by the future basket price. Price effects are split exactly between reproducible productivity and scarce-good pressure. Therefore:
+Labor, capital, transfers, and tax contributions are their after-tax-resource changes, each divided by the future basket price. Price effects are split exactly between reproducible productivity and pressure from irreproducible scarce factors. Therefore:
 
 `100 + labor + capital + transfers + taxes + productivity + scarcity = headline index`
 

@@ -164,7 +164,7 @@ export default function Home() {
         </div>
         <div className="two-col">
           <div><p className="panel-kicker">CONTRIBUTION TO THE INDEX</p><WhyChart year={focused} /></div>
-          <div className="narrative-card"><small>{intervention.name.toUpperCase()}</small><h3>{focused.standardOfLiving >= 100 ? 'Abundance outweighs lost labor income.' : 'Lost labor income outweighs abundance.'}</h3><p>By year {focusYear}, {Math.round(focused.automation * 100)}% of original work is automatable. {intervention.description} Housing remains scarce while reproducible consumption gets cheaper.</p><strong>{Math.round(focused.standardOfLiving - 100) >= 0 ? '+' : ''}{Math.round(focused.standardOfLiving - 100)} points</strong><span>net change from today</span></div>
+          <div className="narrative-card"><small>{intervention.name.toUpperCase()}</small><h3>{focused.standardOfLiving >= 100 ? 'Abundance outweighs lost labor income.' : 'Lost labor income outweighs abundance.'}</h3><p>By year {focusYear}, {Math.round(focused.automation * 100)}% of original work is automatable. {intervention.description} Irreproducible scarce factors remain constrained while reproducible goods get cheaper.</p><strong>{Math.round(focused.standardOfLiving - 100) >= 0 ? '+' : ''}{Math.round(focused.standardOfLiving - 100)} points</strong><span>net change from today</span></div>
         </div>
       </section>
 

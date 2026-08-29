@@ -23,7 +23,7 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 - No-AGI comparison path
 - Exact contribution decomposition
 - Labor / capital / government resource composition
-- Reproducible versus scarce-good affordability
+- Reproducible goods versus irreproducible scarce factors
 - Secondary macroeconomic outputs
 - Provenance labels for every calibration value
 

@@ -97,15 +97,15 @@ export const calibration = {
 
 export const housingCalibration: Record<HousingStatus, { scarceBudgetShare: SourcedValue; ownershipShield: SourcedValue }> = {
   rent: {
-    scarceBudgetShare: { value: 0.32, provenance: 'ASSUMPTION', source: 'Two-good milestone model', note: 'Housing and other scarce costs for a renter.' },
+    scarceBudgetShare: { value: 0.32, provenance: 'ASSUMPTION', source: 'Two-good milestone model', note: 'Renter budget share exposed to irreproducible scarce factors, represented by housing.' },
     ownershipShield: { value: 0, provenance: 'ASSUMPTION', source: 'Two-good milestone model', note: 'Renters receive no housing-asset hedge.' },
   },
   mortgage: {
-    scarceBudgetShare: { value: 0.3, provenance: 'ASSUMPTION', source: 'Two-good milestone model', note: 'Housing and other scarce costs for a mortgaged owner.' },
+    scarceBudgetShare: { value: 0.3, provenance: 'ASSUMPTION', source: 'Two-good milestone model', note: 'Mortgaged-owner budget share exposed to irreproducible scarce factors, represented by housing.' },
     ownershipShield: { value: 0.45, provenance: 'ASSUMPTION', source: 'Two-good milestone model', note: 'Partial hedge from owning the home.' },
   },
   own: {
     scarceBudgetShare: { value: 0.18, provenance: 'ASSUMPTION', source: 'Two-good milestone model', note: 'Lower cash exposure for an outright owner.' },
-    ownershipShield: { value: 0.8, provenance: 'ASSUMPTION', source: 'Two-good milestone model', note: 'Most housing scarcity is hedged by ownership.' },
+    ownershipShield: { value: 0.8, provenance: 'ASSUMPTION', source: 'Two-good milestone model', note: 'Housing ownership hedges most exposure to the modeled fixed factor.' },
   },
 };

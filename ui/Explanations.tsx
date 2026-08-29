@@ -5,7 +5,7 @@ const idx = (value: number) => Math.round(value);
 
 const contributionLabels = {
   labor: 'Labor income', capital: 'Capital / AI income', transfers: 'Government support',
-  taxes: 'Taxes', productivity: 'Cheaper reproducible goods', scarcity: 'Housing & scarcity',
+  taxes: 'Taxes', productivity: 'Cheaper reproducible goods', scarcity: 'Irreproducible scarce factors',
 };
 
 export function WhyChart({ year }: { year: SimulationYear }) {
@@ -50,7 +50,7 @@ export function Affordability({ year }: { year: SimulationYear }) {
   return (
     <div className="afford-grid">
       <article><p>REPRODUCIBLE GOODS & SERVICES</p><strong>{idx(goods)}</strong><span>Today = 100</span><div className="meter"><i style={{ width: `${Math.min(100, goods / 3)}%` }} /></div><small>Manufactured goods, software and many scalable services become easier to produce.</small></article>
-      <article><p>HOUSING & SCARCE GOODS</p><strong>{idx(housing)}</strong><span>Today = 100</span><div className="meter scarce"><i style={{ width: `${Math.min(100, housing)}%` }} /></div><small>Land and desirable locations do not automatically scale with AI productivity.</small></article>
+      <article><p>IRREPRODUCIBLE SCARCE FACTORS</p><strong>{idx(housing)}</strong><span>Today = 100</span><div className="meter scarce"><i style={{ width: `${Math.min(100, housing)}%` }} /></div><small>The papers use land and natural resources as examples. Housing exposure is this simulator&apos;s household-level proxy.</small></article>
     </div>
   );
 }
