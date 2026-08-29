@@ -12,5 +12,5 @@
 - **No uncertainty bands yet.** The largest disagreements are exposed as assumptions, but the first milestone provides one named trajectory rather than distributions or sensitivity ranges.
 - **Material purchasing power is not welfare.** The index excludes leisure, involuntary unemployment costs, health, social status, public goods, environmental effects, and political power.
 - **Job transitions are reduced form.** Average compensated unemployment duration is used as a simple initial weekly reemployment calibration. It is not a direct estimate of job-finding probability, and the model does not distinguish occupations, job quality, hours, or wage changes after reemployment.
-- **The transition buffer is illustrative.** Purchasing power declines over 52 weeks after each job loss to represent unemployment insurance and savings drawdown. The model does not estimate liquid savings, debt, or household-specific consumption smoothing.
+- **Savings and debt are not modeled.** Purchasing power follows after-tax income and modeled prices. Unemployment insurance is included, but liquid savings, debt, severance, and household-specific consumption smoothing are omitted.
 - **Validation is preliminary.** Karger et al. is documented as a target; a matching rapid-AI scenario and formal comparison are future work.

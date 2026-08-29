@@ -169,7 +169,6 @@ export const simulateHouseholdPaths = (
     let weeksUnemployed = calibration.unemploymentBenefitWeeks.value;
     let latestJobLossWeek = -1;
     let benefitIncomeIncrement = 0;
-    let preLossPurchasingPower = timeline[0].employedPurchasingPower;
     const employmentValues: boolean[] = [];
     const jobLossWeeks: number[] = [];
     const reemploymentWeeks: number[] = [];
@@ -185,14 +184,9 @@ export const simulateHouseholdPaths = (
       } else {
         const receivesUnemploymentInsurance = latestJobLossWeek >= 0
           && weeksUnemployed < calibration.unemploymentBenefitWeeks.value;
-        incomeValues.push(outcome.displacedIncome + (receivesUnemploymentInsurance ? benefitIncomeIncrement : 0));
-        if (latestJobLossWeek < 0) {
-          purchasingPowerValues.push(outcome.displacedPurchasingPower);
-        } else {
-          const bufferRemaining = Math.max(0, 1 - weeksUnemployed / calibration.consumptionSmoothingWeeks.value);
-          purchasingPowerValues.push(outcome.displacedPurchasingPower
-            + bufferRemaining * (preLossPurchasingPower - outcome.displacedPurchasingPower));
-        }
+        const income = outcome.displacedIncome + (receivesUnemploymentInsurance ? benefitIncomeIncrement : 0);
+        incomeValues.push(income);
+        purchasingPowerValues.push(income * outcome.displacedPurchasingPower / outcome.displacedIncome);
       }
 
       if (week === totalWeeks) continue;
@@ -202,7 +196,6 @@ export const simulateHouseholdPaths = (
           employed = false;
           weeksUnemployed = 0;
           latestJobLossWeek = week + 1;
-          preLossPurchasingPower = outcome.employedPurchasingPower;
           benefitIncomeIncrement = outcome.temporaryUnemploymentIncome - outcome.displacedIncome;
           jobLossWeeks.push(week + 1);
         }

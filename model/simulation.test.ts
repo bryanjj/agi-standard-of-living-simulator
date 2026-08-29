@@ -99,7 +99,7 @@ describe('simulate', () => {
     expect(timeline[0].employmentProbability).toBeCloseTo(0.959, 10);
     expect(timeline[520].employmentProbability).toBeCloseTo(0.5, 10);
     expect(timeline[1040].employmentProbability).toBeCloseTo(0.041, 10);
-    expect(timeline[2080].employmentProbability).toBeGreaterThan(0);
+    expect(timeline[1560].employmentProbability).toBeGreaterThan(0);
     expect(employmentProbabilityAtYear(100)).toBeGreaterThan(0);
     for (let week = 1; week < timeline.length; week += 1) {
       expect(timeline[week].employmentProbability).toBeLessThan(timeline[week - 1].employmentProbability);
@@ -112,7 +112,7 @@ describe('simulate', () => {
     const second = simulateHouseholdPaths(result, result, 1_000, 2026);
     expect(first).toEqual(second);
     expect(first).toHaveLength(1_000);
-    expect(first.every((path) => path.employmentValues.length === 2081 && path.incomeValues.length === 2081 && path.purchasingPowerValues.length === 2081)).toBe(true);
+    expect(first.every((path) => path.employmentValues.length === 1561 && path.incomeValues.length === 1561 && path.purchasingPowerValues.length === 1561)).toBe(true);
     expect(first.some((path) => path.reemploymentWeeks.length > 0)).toBe(true);
     expect(first.every((path) => path.reemploymentWeeks.every((week) => path.employmentValues[week]))).toBe(true);
     const employedShare = (week: number) => first.filter((path) => path.employmentValues[week]).length / first.length;
@@ -124,7 +124,7 @@ describe('simulate', () => {
     expect(first.some((path) => path.incomeValues[1040] > timeline[1040].displacedIncome)).toBe(true);
   });
 
-  it('pays 16 weeks of unemployment insurance and smooths purchasing power for one year', () => {
+  it('pays 16 weeks of unemployment insurance without a separate savings buffer', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
     const timeline = weeklyHouseholdOutcomes(result, result);
     const paths = simulateHouseholdPaths(result, result, 1_000, 8);
@@ -137,8 +137,9 @@ describe('simulate', () => {
     expect(path.incomeValues[week]).toBeCloseTo(timeline[week].displacedIncome + benefitIncrement, 10);
     expect(path.incomeValues[week + 15]).toBeGreaterThan(timeline[week + 15].displacedIncome);
     expect(path.incomeValues[week + 16]).toBeCloseTo(timeline[week + 16].displacedIncome, 10);
-    expect(path.purchasingPowerValues[week]).toBeCloseTo(timeline[week - 1].employedPurchasingPower, 10);
-    expect(path.purchasingPowerValues[week + 52]).toBeCloseTo(timeline[week + 52].displacedPurchasingPower, 10);
+    expect(path.purchasingPowerValues[week]).toBeLessThan(timeline[week - 1].employedPurchasingPower);
+    expect(path.purchasingPowerValues[week + 15]).toBeGreaterThan(timeline[week + 15].displacedPurchasingPower);
+    expect(path.purchasingPowerValues[week + 16]).toBeCloseTo(timeline[week + 16].displacedPurchasingPower, 10);
   });
 
   it('samples 1,000 workers into 250 weighted display paths', () => {
@@ -155,9 +156,9 @@ describe('simulate', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
     const paths = simulateHouseholdPaths(result, result, 1_000, 8);
     const mean = meanHouseholdPath(paths);
-    expect(mean.incomeValues).toHaveLength(2081);
-    expect(mean.purchasingPowerValues).toHaveLength(2081);
-    for (const week of [0, 520, 1040, 2080]) {
+    expect(mean.incomeValues).toHaveLength(1561);
+    expect(mean.purchasingPowerValues).toHaveLength(1561);
+    for (const week of [0, 520, 1040, 1560]) {
       expect(mean.incomeValues[week]).toBeCloseTo(
         paths.reduce((sum, path) => sum + path.incomeValues[week], 0) / paths.length,
         10,

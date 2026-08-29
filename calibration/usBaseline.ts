@@ -33,10 +33,6 @@ export const calibration = {
     value: 0, provenance: 'ASSUMPTION', source: 'Status-quo policy interpretation',
     note: 'Regular unemployment insurance expires, so status quo provides no permanent wage-loss replacement after the temporary benefit spell.',
   },
-  consumptionSmoothingWeeks: {
-    value: 52, provenance: 'ASSUMPTION', source: 'Household transition-buffer calibration',
-    note: 'After displacement, purchasing power converges linearly from its pre-loss level to the lower long-run level over one year, representing temporary benefits and savings drawdown.',
-  },
   expandedSafetyNetReplacement: {
     value: 0.35, provenance: 'ASSUMPTION', source: 'Illustrative intervention calibration',
     note: 'Expanded safety net replaces 35% of modeled lost labor income.',

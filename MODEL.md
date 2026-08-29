@@ -4,7 +4,7 @@ This milestone is a transparent reduced-form household simulator, not a general-
 
 ## 1. Employment and automation
 
-For year `t` from 0 to 40, the chance that a modeled worker has a job follows a logistic curve. Let `p₀ = 0.959`, the current labor-force employment rate, and let the midpoint `m = 10` years. The steepness is calculated so the curve passes through `p₀` today:
+For year `t` from 0 to 30, the chance that a modeled worker has a job follows a logistic curve. Let `p₀ = 0.959`, the current labor-force employment rate, and let the midpoint `m = 10` years. The steepness is calculated so the curve passes through `p₀` today:
 
 `k = ln[p₀ / (1 − p₀)] / m ≈ 0.315`
 
@@ -112,13 +112,11 @@ The weekly job-loss probability is solved so that expected employment continues 
 
 Employment and reemployment both approach zero without reaching it. This is a reduced-form transition, not an occupation-level labor-market model. For rendering performance, the charts draw 250 representative paths; each path is weighted as four of the 1,000 simulated workers.
 
-Purchasing power does not fall immediately to the long-run displaced level. For a worker displaced in week `d`, the simulator records purchasing power just before displacement and applies a one-year transition buffer:
+Each worker's purchasing power follows that worker's after-tax income path divided by the modeled household basket price:
 
-`bufferRemaining(w) = max(0, 1 − (w − d) / 52)`
+`purchasingPower(w) = afterTaxIncome(w) / basketPrice(w)`
 
-`purchasingPower(w) = displacedPurchasingPower(w) + bufferRemaining(w) × [preDisplacementPurchasingPower − displacedPurchasingPower(w)]`
-
-This represents unemployment insurance and savings drawdown. Unemployment insurance is explicit in the income path; the additional consumption smoothing is a transparent simulator assumption, not an estimate of a Q3 household's liquid savings. Reemployment restores the employed purchasing-power path. A later job loss starts a new transition. The model does not treat this buffer as stock equity or give it AI-capital returns.
+Unemployment insurance therefore cushions purchasing power during its 16-week modeled duration. There is no separate linear savings-drawdown buffer. Liquid savings, debt, severance, and household-specific consumption smoothing are omitted. Reemployment restores the employed purchasing-power path.
 
 The charts render weekly points rather than annual steps. Representative paths are drawn with opacity based on the number of simulated workers they represent. Where likely paths overlap, their color accumulates and makes more probable outcomes darker. A separate dark line shows the arithmetic mean across all 1,000 simulated workers at every week for income and purchasing power. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond initial employment, job loss, and reemployment timing.
 

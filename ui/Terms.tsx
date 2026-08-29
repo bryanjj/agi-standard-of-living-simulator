@@ -22,7 +22,7 @@ const notes = {
   purchasingPower: {
     marker: 4,
     name: 'Material purchasing power',
-    definition: 'The simulator’s after-tax household resources divided by its modeled basket price. Q3 today is set to 100. Each path applies modeled prices and a temporary transition buffer to one simulated worker’s income path. Darker overlapping paths indicate more likely outcomes, and the dark line is the weekly mean across all 1,000 workers.',
+    definition: 'The simulator’s after-tax household income divided by its modeled basket price. Q3 today is set to 100. Unemployment insurance affects the first 16 weeks after a modeled job loss; no separate savings-drawdown buffer is included. Darker overlapping paths indicate more likely outcomes, and the dark line is the weekly mean across all 1,000 workers.',
     sources: [],
   },
   incomeIndex: {
@@ -85,14 +85,8 @@ const notes = {
     definition: 'The initial 95.9% rate is one minus the July 2026 U.S. unemployment rate among the civilian labor force. A calibrated logistic curve passes through 50% in year 10 and approaches zero without reaching it. Employed workers can lose work and unemployed workers can be rehired, with the weekly reemployment probability following the same decline.',
     sources: [{ label: 'U.S. Bureau of Labor Statistics', href: 'https://www.bls.gov/cps/latest-numbers.htm' }],
   },
-  consumptionSmoothing: {
-    marker: 14,
-    name: 'Transition buffer',
-    definition: 'After each job loss, the simulator holds purchasing power near its pre-loss level, then moves it linearly toward the lower long-run level over 52 weeks. Unemployment insurance is explicit in the income path; the remaining buffer represents savings drawdown without claiming a measured Q3 savings balance.',
-    sources: [],
-  },
   unemploymentInsurance: {
-    marker: 15,
+    marker: 14,
     name: 'Unemployment insurance',
     definition: 'After each modeled job loss, regular unemployment insurance replaces 42.2% of the worker wage for 16 weeks. The rate is the Department of Labor claimant-level average for 2025; 16 weeks rounds the 15.74-week average regular-program duration through July 2026. State eligibility rules and benefit caps are not modeled.',
     sources: [

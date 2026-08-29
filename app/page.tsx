@@ -23,7 +23,7 @@ function OutcomeTooltip({ active, label, payload, metric }: { active?: boolean; 
   const mean = metric === 'income' ? datum.meanIncome : datum.meanPurchasingPower;
   const employed = metric === 'income' ? datum.employedIncome : datum.employedPurchasingPower;
   const displaced = metric === 'income' ? datum.displacedIncome : datum.displacedPurchasingPower;
-  const displacedLabel = metric === 'income' ? 'if not employed' : 'after buffer ends';
+  const displacedLabel = 'if not employed without UI';
   return <div className="income-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${Number(label).toFixed(1)}`}</small><strong>{round(mean)}</strong><span>simulation mean</span><b>{round(datum.employedChance)}% chance employed · {round(employed)} if employed · {round(displaced)} {displacedLabel}</b></div>;
 }
 
@@ -78,7 +78,7 @@ export default function Home() {
         <div className="intro">
           <p className="eyebrow"><Term note="agi">AGI</Term> STANDARD OF LIVING SIMULATOR</p>
           <h1>How would <Term note="agi">AGI</Term> change<br />your <em>standard of living?</em></h1>
-          <p className="lede">Follow a middle-income U.S. household across a 40-year logistic employment transition.</p>
+          <p className="lede">Follow a middle-income U.S. household across a 30-year logistic employment transition.</p>
           <div className="scenario-pill"><span>SCENARIO</span><strong><Term note="agi">{result.scenario.name}</Term></strong><small>{intervention.name} · {intervention.shortDescription}</small></div>
         </div>
 
@@ -93,14 +93,14 @@ export default function Home() {
         <div className="workspace single-workspace">
           <section className="result-card comparison-card">
             <div className="result-head">
-              <div><p className="section-label"><span>02</span> 1,000 SIMULATED WORKERS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Dark line is the mean · <Term note="consumptionSmoothing">52-week buffer</Term></p></div>
-              <div className="outcome" style={{ color: referencePreset.color }}><strong>{calibration.consumptionSmoothingWeeks.value}</strong><span>WEEK TRANSITION<br />AFTER JOB LOSS</span></div>
+              <div><p className="section-label"><span>02</span> 1,000 SIMULATED WORKERS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Dark line is the mean · No savings buffer</p></div>
+              <div className="outcome" style={{ color: referencePreset.color }}><strong>{calibration.unemploymentBenefitWeeks.value}</strong><span>WEEKS OF UI<br />AFTER JOB LOSS</span></div>
             </div>
-            <div className="chart-wrap comparison-chart" aria-label="Purchasing-power outcomes for one thousand simulated comparable Q3 workers over 40 years">
+            <div className="chart-wrap comparison-chart" aria-label="Purchasing-power outcomes for one thousand simulated comparable Q3 workers over 30 years">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 12, right: 16, bottom: 3, left: 54 }}>
                   <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
-                  <XAxis type="number" dataKey="year" domain={[0,40]} ticks={[0,10,20,30,40]} tickFormatter={(v) => v === 0 ? 'Today' : `Yr ${v}`} axisLine={false} tickLine={false} />
+                  <XAxis type="number" dataKey="year" domain={[0,30]} ticks={[0,10,20,30]} tickFormatter={(v) => v === 0 ? 'Today' : `Yr ${v}`} axisLine={false} tickLine={false} />
                   <YAxis domain={['auto','auto']} axisLine={false} tickLine={false} width={42}>
                     <Label value="Purchasing power · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                   </YAxis>
@@ -120,9 +120,9 @@ export default function Home() {
               <div><span>EMPLOYED TODAY</span><strong>{chanceLabel(0)}</strong></div><i />
               <div><span>YEAR 10</span><strong>{chanceLabel(10)}</strong></div><i />
               <div><span>YEAR 20</span><strong>{chanceLabel(20)}</strong></div><i />
-              <div><span>YEAR 40</span><strong>{chanceLabel(40)}</strong></div>
+              <div><span>YEAR 30</span><strong>{chanceLabel(30)}</strong></div>
             </div>
-            <p className="simulation-note chart-density-note">The dark line is the mean across all 1,000 simulated workers at each week. Both charts use the same job histories. The chart draws 250 representative paths, each weighted as four workers. After each job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown. Reemployment restores the employed path.</p>
+            <p className="simulation-note chart-density-note">The dark line is the mean across all 1,000 simulated workers at each week. Both charts use the same job histories. The chart draws 250 representative paths, each weighted as four workers. Purchasing power follows after-tax income divided by the modeled basket price. Unemployment insurance cushions the first 16 weeks after job loss; no separate savings-drawdown buffer is included. Reemployment restores the employed path.</p>
           </section>
         </div>
 
@@ -131,11 +131,11 @@ export default function Home() {
             <div><p className="section-label">1,000 SIMULATED WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">50% employed in year 10</Term> · Dark line is the mean</p></div>
             <div className="displacement-callout"><strong>{round(displacedByYearTen)}%</strong><span>MODELED CHANCE<br />NOT EMPLOYED AT YEAR 10</span></div>
           </div>
-          <div className="chart-wrap income-chart" aria-label="After-tax income outcomes for one thousand simulated comparable Q3 workers over 40 years">
+          <div className="chart-wrap income-chart" aria-label="After-tax income outcomes for one thousand simulated comparable Q3 workers over 30 years">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={incomeChartData} margin={{ top: 12, right: 16, bottom: 3, left: 54 }}>
                 <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
-                <XAxis type="number" dataKey="year" domain={[0,40]} ticks={[0,10,20,30,40]} tickFormatter={(v) => v === 0 ? 'Today' : `Yr ${v}`} axisLine={false} tickLine={false} />
+                <XAxis type="number" dataKey="year" domain={[0,30]} ticks={[0,10,20,30]} tickFormatter={(v) => v === 0 ? 'Today' : `Yr ${v}`} axisLine={false} tickLine={false} />
                 <YAxis domain={['auto','auto']} axisLine={false} tickLine={false} width={42}>
                   <Label value="After-tax income · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                 </YAxis>
@@ -146,7 +146,7 @@ export default function Home() {
             </ResponsiveContainer>
           </div>
           <div className="quintile-legend single-legend probability-legend income-legend"><span className="density-key"><i /> Darker = more likely</span><span className="mean-key"><i /> Simulation mean</span></div>
-          <div className="displacement-probabilities" aria-label="Chance of having a job"><span><small>TODAY</small><strong>{chanceLabel(0)}</strong></span><span><small>YEAR 10</small><strong>{chanceLabel(10)}</strong></span><span><small>YEAR 20</small><strong>{chanceLabel(20)}</strong></span><span><small>YEAR 30</small><strong>{chanceLabel(30)}</strong></span><span><small>YEAR 40</small><strong>{chanceLabel(40)}</strong></span></div>
+          <div className="displacement-probabilities" aria-label="Chance of having a job"><span><small>TODAY</small><strong>{chanceLabel(0)}</strong></span><span><small>YEAR 10</small><strong>{chanceLabel(10)}</strong></span><span><small>YEAR 20</small><strong>{chanceLabel(20)}</strong></span><span><small>YEAR 30</small><strong>{chanceLabel(30)}</strong></span></div>
           <p className="simulation-note">The dark line is the mean across all 1,000 simulated workers at each week. Each employed worker faces a weekly job-loss draw. An unemployed worker can find another job, but the weekly chance declines from 6.4% today and approaches 0% without reaching it. After each job loss, <Term note="unemploymentInsurance">unemployment insurance replaces 42.2% of the worker&apos;s wage for 16 weeks</Term>. Labor income then remains at $0 until reemployment; stock income and baseline government support can keep household income above $0.</p>
         </section>
       </section>
@@ -164,7 +164,7 @@ export default function Home() {
       <section className="analysis-section dark-section">
         <div className="section-intro">
           <div><p className="eyebrow">AGGREGATE Q3 AVERAGE</p><h2>Breakdown.</h2></div>
-          <div className="year-tabs" aria-label="Explanation year">{[5,10,20,40].map((year) => <button className={focusYear === year ? 'active' : ''} key={year} onClick={() => setFocusYear(year)}>Year {year}</button>)}</div>
+          <div className="year-tabs" aria-label="Explanation year">{[5,10,20,30].map((year) => <button className={focusYear === year ? 'active' : ''} key={year} onClick={() => setFocusYear(year)}>Year {year}</button>)}</div>
         </div>
         <div className="two-col">
           <div><p className="panel-kicker">CONTRIBUTION TO THE INDEX</p><WhyChart year={focused} scale={selectedScale} /></div>
@@ -194,7 +194,7 @@ export default function Home() {
       <TermNotes />
 
       <section className="method-section">
-        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Sources and assumptions.</h2><p>The reference household uses Census Q3 mean household income. <Term note="equity">Stock equity</Term> and inferred household traits use the 2022 Survey of Consumer Finances. The initial <Term note="employmentProbability">chance of employment</Term> uses the latest BLS unemployment rate. <Term note="unemploymentInsurance">Unemployment insurance</Term> uses national Department of Labor averages. The <Term note="consumptionSmoothing">transition buffer</Term> also represents savings without treating cash as AI capital.</p></div>
+        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Sources and assumptions.</h2><p>The reference household uses Census Q3 mean household income. <Term note="equity">Stock equity</Term> and inferred household traits use the 2022 Survey of Consumer Finances. The initial <Term note="employmentProbability">chance of employment</Term> uses the latest BLS unemployment rate. <Term note="unemploymentInsurance">Unemployment insurance</Term> uses national Department of Labor averages. Purchasing power applies the modeled price index to each worker&apos;s after-tax income path.</p></div>
         <div className="source-list">
           <a href="https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-income-households.html" target="_blank" rel="noreferrer"><span>DATA · 2024</span><strong>U.S. Census H-3</strong><small>Mean Q3 household income ↗</small></a>
           <a href="https://www.federalreserve.gov/econres/scfindex.htm" target="_blank" rel="noreferrer"><span>DATA · 2022</span><strong>Survey of Consumer Finances</strong><small>Median stock equity by income group ↗</small></a>
