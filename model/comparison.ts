@@ -28,6 +28,7 @@ export type IncomeOutcomes = {
 
 export type SimulatedHouseholdPath = {
   id: string;
+  profileId?: string;
   employmentValues: boolean[];
   jobLossWeeks: number[];
   reemploymentWeeks: number[];
@@ -42,6 +43,17 @@ export type DisplayedHouseholdPath = SimulatedHouseholdPath & {
 export type MeanHouseholdPath = {
   incomeValues: number[];
   purchasingPowerValues: number[];
+};
+
+export type PopulationProfile = {
+  id: string;
+  result: SimulationResult;
+  weight: number;
+};
+
+export type PopulationSimulation = {
+  paths: SimulatedHouseholdPath[];
+  profileCounts: Record<string, number>;
 };
 
 export type WeeklyHouseholdOutcome = {
@@ -217,6 +229,109 @@ export const simulateHouseholdPaths = (
       purchasingPowerValues,
     };
   });
+};
+
+export const simulatePopulationPaths = (
+  profiles: PopulationProfile[],
+  count = 1_000,
+  seed = 2026,
+): PopulationSimulation => {
+  if (profiles.length === 0) throw new Error('At least one population profile is required');
+  const totalWeight = profiles.reduce((sum, profile) => sum + profile.weight, 0);
+  if (totalWeight <= 0) throw new Error('Population profile weights must sum to more than zero');
+
+  const random = seededRandom(seed ^ 0x51F15EED);
+  const assignments = Array.from({ length: count }, () => {
+    const draw = random() * totalWeight;
+    let cumulative = 0;
+    const match = profiles.findIndex((profile) => {
+      cumulative += profile.weight;
+      return draw < cumulative;
+    });
+    return match < 0 ? profiles.length - 1 : match;
+  });
+  const profileCounts = Object.fromEntries(profiles.map((profile, index) => [
+    profile.id,
+    assignments.filter((assignment) => assignment === index).length,
+  ]));
+  const reference = profiles[Math.floor(profiles.length / 2)].result;
+  const rawPaths = profiles.flatMap((profile, index) => (
+    simulateHouseholdPaths(profile.result, reference, profileCounts[profile.id], seed + (index + 1) * 10_007)
+      .map((path) => ({ ...path, profileId: profile.id }))
+  ));
+  const initialMean = rawPaths.reduce((sum, path) => sum + path.incomeValues[0], 0) / rawPaths.length;
+  const normalization = 100 / initialMean;
+  const paths = rawPaths.map((path, index) => ({
+    ...path,
+    id: `worker${index}`,
+    incomeValues: path.incomeValues.map((value) => value * normalization),
+    purchasingPowerValues: path.purchasingPowerValues.map((value) => value * normalization),
+  }));
+
+  return { paths, profileCounts };
+};
+
+export const aggregateSimulationResults = (
+  profiles: Array<{ result: SimulationResult; count: number }>,
+): SimulationResult => {
+  const totalCount = profiles.reduce((sum, profile) => sum + profile.count, 0);
+  if (totalCount <= 0) throw new Error('At least one sampled household is required');
+  const average = (getValue: (result: SimulationResult) => number) => (
+    profiles.reduce((sum, profile) => sum + profile.count * getValue(profile.result), 0) / totalCount
+  );
+  const baselineAfterTax = average((result) => afterTaxResources(result.years[0]));
+  const years = profiles[0].result.years.map((_, yearIndex) => {
+    const yearAverage = (getValue: (year: SimulationYear) => number) => average((result) => getValue(result.years[yearIndex]));
+    const laborIncome = yearAverage((year) => year.laborIncome);
+    const capitalIncome = yearAverage((year) => year.capitalIncome);
+    const transfers = yearAverage((year) => year.transfers);
+    const taxes = yearAverage((year) => year.taxes);
+    const resourceTotal = Math.max(1, laborIncome + capitalIncome + transfers);
+    const decomposition = Object.fromEntries(
+      (['labor', 'capital', 'transfers', 'taxes', 'productivity', 'scarcity'] as const).map((key) => [
+        key,
+        average((result) => result.years[yearIndex].decomposition[key] * afterTaxResources(result.years[0])) / baselineAfterTax,
+      ]),
+    ) as SimulationYear['decomposition'];
+
+    return {
+      year: yearIndex,
+      standardOfLiving: 100 + Object.values(decomposition).reduce((sum, value) => sum + value, 0),
+      noAgiBaseline: yearAverage((year) => year.noAgiBaseline),
+      automation: yearAverage((year) => year.automation),
+      employment: yearAverage((year) => year.employment),
+      output: yearAverage((year) => year.output),
+      laborShare: yearAverage((year) => year.laborShare),
+      wageIndex: yearAverage((year) => year.wageIndex),
+      laborIncome,
+      capitalIncome,
+      transfers,
+      taxes,
+      resourceShares: {
+        labor: laborIncome / resourceTotal,
+        capital: capitalIncome / resourceTotal,
+        transfers: transfers / resourceTotal,
+      },
+      prices: {
+        reproducible: yearAverage((year) => year.prices.reproducible),
+        scarce: yearAverage((year) => year.prices.scarce),
+        householdBasket: yearAverage((year) => year.prices.householdBasket),
+      },
+      decomposition,
+    };
+  });
+
+  return {
+    scenario: profiles[0].result.scenario,
+    intervention: profiles[0].result.intervention,
+    household: {
+      annualIncome: average((result) => result.household.annualIncome),
+      householdSize: average((result) => result.household.householdSize),
+      equityHoldings: average((result) => result.household.equityHoldings),
+      housing: 'mortgage',
+    },
+    years,
+  };
 };
 
 export const sampleHouseholdPaths = (

@@ -17,11 +17,11 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 
 ## What is included
 
-- One source-backed Q3 middle-income reference household
+- A fixed random sample of 1,000 U.S. workers drawn across five equally sized household-income quintile profiles
 - Status quo policy path
 - A 30-year display horizon with employment at 50% in year 10 and approaching, but never reaching, zero
-- Purchasing power and after-tax income normalized to Q3 today = 100
-- Probability-density charts for 1,000 matched weekly employment, income, and purchasing-power paths, shown through 250 weighted representative paths with a mean across all 1,000 workers
+- Purchasing power and after-tax income normalized so the sample mean today = 100
+- Probability-density charts for 1,000 matched weekly employment, income, and purchasing-power paths, shown through 250 weighted representative paths with a mean across all 1,000 samples
 - Weekly job loss and reemployment, with the chance of finding work declining asymptotically
 - Unemployment insurance replacing 42.2% of worker wages for 16 weeks after each job loss
 - Purchasing power derived from each worker's after-tax income and the modeled basket price, with no separate savings buffer

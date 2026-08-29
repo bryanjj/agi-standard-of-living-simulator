@@ -10,7 +10,7 @@ const notes = {
   quintile: {
     marker: 2,
     name: 'Income quintile',
-    definition: 'One fifth of U.S. households ranked by household income. Preset incomes use Census mean income for each fifth.',
+    definition: 'One fifth of U.S. households ranked by household income. Each sampled worker independently draws one of the five equally sized groups, then receives that quintile’s Census mean income and its other modeled household-profile values.',
     sources: [{ label: 'U.S. Census H-3', href: 'https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-income-households.html' }],
   },
   equity: {
@@ -22,13 +22,13 @@ const notes = {
   purchasingPower: {
     marker: 4,
     name: 'Material purchasing power',
-    definition: 'The simulator’s after-tax household income divided by its modeled basket price. Q3 today is set to 100. Unemployment insurance affects the first 16 weeks after a modeled job loss; no separate savings-drawdown buffer is included. Darker overlapping paths indicate more likely outcomes, and the dark line is the weekly mean across all 1,000 workers.',
+    definition: 'The simulator’s after-tax household income divided by its modeled basket price. The mean across the fixed sample of 1,000 U.S. workers today is set to 100. Unemployment insurance affects the first 16 weeks after a modeled job loss; no separate savings-drawdown buffer is included. The dark line is the weekly sample mean.',
     sources: [],
   },
   incomeIndex: {
     marker: 5,
     name: 'Modeled household income',
-    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each line is one fixed weekly Monte Carlo path. Labor income can stop after job loss and resume after reemployment. Darker overlapping paths indicate more likely outcomes, and the dark line is the weekly mean across all 1,000 workers.',
+    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each line is one fixed weekly Monte Carlo path for a worker assigned a randomly sampled income-quintile profile. Labor income can stop after job loss and resume after reemployment. The dark line is the weekly mean across all 1,000 samples.',
     sources: [],
   },
   noAgi: {

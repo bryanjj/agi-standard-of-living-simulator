@@ -4,7 +4,7 @@ import type { Household } from './types';
 import { simulate } from './simulation';
 import { interventions } from '../scenarios/interventions';
 import { quintilePresets } from '../calibration/quintiles';
-import { afterTaxIncomeIndex, meanHouseholdPath, purchasingPowerIndex, sampleHouseholdPaths, simulateHouseholdPaths, weeklyHouseholdOutcomes } from './comparison';
+import { afterTaxIncomeIndex, aggregateSimulationResults, meanHouseholdPath, purchasingPowerIndex, sampleHouseholdPaths, simulateHouseholdPaths, simulatePopulationPaths, weeklyHouseholdOutcomes } from './comparison';
 import { employmentProbabilityAtYear } from './employment';
 
 const household: Household = {
@@ -167,6 +167,30 @@ describe('simulate', () => {
         paths.reduce((sum, path) => sum + path.purchasingPowerValues[week], 0) / paths.length,
         10,
       );
+    }
+  });
+
+  it('draws a stable population sample across all five income quintiles', () => {
+    const results = quintilePresets.map((preset) => simulate(transformative20Year, preset.household));
+    const profiles = quintilePresets.map((preset, index) => ({ id: preset.id, result: results[index], weight: 0.2 }));
+    const first = simulatePopulationPaths(profiles, 1_000, 8);
+    const second = simulatePopulationPaths(profiles, 1_000, 8);
+    expect(first).toEqual(second);
+    expect(first.paths).toHaveLength(1_000);
+    expect(Object.values(first.profileCounts).reduce((sum, count) => sum + count, 0)).toBe(1_000);
+    expect(Object.values(first.profileCounts).every((count) => count > 150 && count < 250)).toBe(true);
+    expect(new Set(first.paths.map((path) => path.profileId))).toEqual(new Set(quintilePresets.map((preset) => preset.id)));
+    expect(meanHouseholdPath(first.paths).incomeValues[0]).toBeCloseTo(100, 10);
+    expect(meanHouseholdPath(first.paths).purchasingPowerValues[0]).toBeCloseTo(100, 10);
+
+    const aggregate = aggregateSimulationResults(results.map((result, index) => ({
+      result,
+      count: first.profileCounts[quintilePresets[index].id],
+    })));
+    expect(aggregate.household.annualIncome).toBeGreaterThan(quintilePresets[2].household.annualIncome);
+    for (const year of aggregate.years) {
+      expect(100 + Object.values(year.decomposition).reduce((sum, value) => sum + value, 0))
+        .toBeCloseTo(year.standardOfLiving, 10);
     }
   });
 
