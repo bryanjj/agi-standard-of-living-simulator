@@ -7,28 +7,28 @@ const notes = {
     definition: 'A scenario in which AI can perform all tasks humans can perform. The 20-year path follows the bounded-task baseline scenario in Korinek and Suh.',
     sources: [{ label: 'Korinek & Suh', href: 'https://www.nber.org/papers/w32255' }],
   },
-  intervention: {
-    marker: 2,
-    name: 'Intervention',
-    definition: 'A simulator-defined policy variant. Status quo keeps the simplified baseline rules; the other choices change transfers or broad ownership. They are assumptions, not paper forecasts.',
-    sources: [],
-  },
   quintile: {
-    marker: 3,
+    marker: 2,
     name: 'Income quintile',
     definition: 'One fifth of U.S. households ranked by household income. Preset incomes use Census mean income for each fifth.',
     sources: [{ label: 'U.S. Census H-3', href: 'https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-income-households.html' }],
   },
   equity: {
-    marker: 4,
+    marker: 3,
     name: 'Stock equity',
     definition: 'Direct and indirect stock holdings, including stock funds and equity held through retirement accounts. Presets use the survey-weighted median; cash, deposits, bonds, and housing are excluded.',
     sources: [{ label: 'Federal Reserve SCF', href: 'https://www.federalreserve.gov/econres/scfindex.htm' }],
   },
   purchasingPower: {
-    marker: 5,
+    marker: 4,
     name: 'Material purchasing power',
-    definition: 'The simulator’s after-tax household resources divided by its modeled basket price. Each quintile begins at 100 today. This is a simulator definition, not a statistic reported in the papers.',
+    definition: 'The simulator’s after-tax household resources divided by its modeled basket price. Q3 today is set to 100 and every other value is relative to that benchmark. This is a simulator definition.',
+    sources: [],
+  },
+  incomeIndex: {
+    marker: 5,
+    name: 'Modeled household income',
+    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. The chart is an index with Q3 today set to 100.',
     sources: [],
   },
   noAgi: {
@@ -52,7 +52,7 @@ const notes = {
   scarceFactors: {
     marker: 9,
     name: 'Irreproducible scarce factors',
-    definition: 'Fixed inputs that do not automatically scale with AI productivity. The papers use land, natural resources, minerals, matter, and energy as examples. Housing exposure is the simulator’s household-level proxy.',
+    definition: 'Fixed inputs that do not automatically scale with AI productivity. Korinek and Suh discuss minerals, matter, and energy. Trammell and Korinek use land and natural resources. Housing exposure is the simulator’s household-level proxy.',
     sources: [
       { label: 'Korinek & Suh', href: 'https://www.nber.org/papers/w32255' },
       { label: 'Trammell & Korinek', href: 'https://www.nber.org/papers/w31815' },
@@ -98,7 +98,7 @@ export function TermNotes() {
       <div>
         <p className="eyebrow">DEFINITIONS &amp; CITATIONS</p>
         <h2 id="term-notes-heading">What the terms mean.</h2>
-        <p>Superscripts distinguish paper terminology, source data, and definitions created for this simulator.</p>
+        <p>Superscripts identify sources and definitions created for this simulator.</p>
       </div>
       <ol>
         {Object.entries(notes).map(([id, item]) => (

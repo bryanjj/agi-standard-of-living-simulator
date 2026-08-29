@@ -1,8 +1,8 @@
 # Common Wealth
 
-**Common Wealth** is an open-source, exploratory simulator for one question: how might a household's material standard of living change during a transition to transformative AI?
+**Common Wealth** is an open-source simulator for one question: how might a household's material standard of living change during a transition to transformative AI?
 
-The first milestone implements one named scenario, **20-Year Transformative AGI / No New Policy**, with a two-good consumption model and a deterministic TypeScript simulation. It is not a forecast, financial advice, or a prediction about any individual occupation.
+The first milestone implements one named scenario, **20-Year Transformative AGI / No New Policy**, with a two-category consumption model and a deterministic TypeScript simulation.
 
 ## Local development
 
@@ -17,8 +17,8 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 
 - Household income, size, stock equity, and housing inputs
 - Five source-backed U.S. income-quintile presets with a hidden manual editor
-- Four transparent policy intervention stress tests, defaulting to status quo
-- Material purchasing power normalized to Today = 100
+- Status quo policy path
+- Purchasing power and after-tax income normalized to Q3 today = 100
 - A five-line comparison chart with one color per quintile
 - No-AGI comparison path
 - Exact contribution decomposition

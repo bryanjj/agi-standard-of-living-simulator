@@ -18,7 +18,7 @@ Federal Reserve Board, [2022 Survey of Consumer Finances public summary extract]
 
 ## Assumptions
 
-All remaining values—including tax bands, benefit replacement, dividend shares, household income-composition inference, price pass-through, housing shares and hedges, the output curve, and the no-AGI path—are marked **ASSUMPTION** in code and listed in the UI. They are not presented as measured estimates.
+All remaining values, including tax bands, benefit replacement, dividend shares, household income-composition inference, price pass-through, housing shares and hedges, the output curve, and the no-AGI path, are marked **ASSUMPTION** in code and listed in the UI. They are not presented as measured estimates.
 
 ## Calculated values
 

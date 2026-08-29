@@ -70,7 +70,7 @@ Before a housing-ownership hedge:
 
 `rawScarcePrice(t) = 1 + 0.6 × (output(t)^(1/3) − 1)`
 
-“Irreproducible scarce factors” follows Korinek and Suh; Trammell and Korinek likewise analyze fixed factors such as land and natural resources. To connect that macroeconomic concept to households, the simulator uses housing exposure as a proxy: renters receive no hedge, mortgaged owners a 45% hedge, and outright owners an 80% hedge. Modeled budget shares are 32%, 30%, and 18%, respectively. The housing proxy, shares, and hedges are milestone-one assumptions, not values taken from the papers.
+“Irreproducible scarce factors” follows Korinek and Suh; Trammell and Korinek likewise analyze fixed factors such as land and natural resources. To connect that macroeconomic concept to households, the simulator uses housing exposure as a proxy: renters receive no hedge, mortgaged owners a 45% hedge, and outright owners an 80% hedge. Modeled budget shares are 32%, 30%, and 18%, respectively. The housing proxy, shares, and hedges are milestone-one assumptions, not values taken from the cited sources.
 
 The household basket is a fixed-share Laspeyres-style index:
 
@@ -81,6 +81,14 @@ The household basket is a fixed-share Laspeyres-style index:
 `standardOfLiving(t) = 100 × [afterTaxResources(t) / afterTaxResources(0)] / basketPrice(t)`
 
 It measures command over an equivalent material consumption basket, not nominal salary and not utility. Household size affects inferred baseline transfers; the index does not value leisure or household composition changes.
+
+The comparison chart places every quintile on a common scale with Q3 today equal to 100:
+
+`comparisonPurchasingPower(h,t) = standardOfLiving(h,t) × afterTaxResources(h,0) / afterTaxResources(Q3,0)`
+
+The income chart uses the same reference point before the modeled price adjustment:
+
+`afterTaxIncomeIndex(h,t) = 100 × afterTaxResources(h,t) / afterTaxResources(Q3,0)`
 
 ## 7. Exact decomposition
 

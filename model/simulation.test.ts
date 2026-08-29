@@ -4,6 +4,7 @@ import type { Household } from './types';
 import { simulate } from './simulation';
 import { interventions } from '../scenarios/interventions';
 import { quintilePresets } from '../calibration/quintiles';
+import { afterTaxIncomeIndex, purchasingPowerIndex } from './comparison';
 
 const household: Household = {
   annualIncome: 85_000,
@@ -75,6 +76,20 @@ describe('simulate', () => {
     for (const preset of quintilePresets) {
       expect(simulate(transformative20Year, preset.household).years[0].standardOfLiving).toBeCloseTo(100, 10);
     }
+  });
+
+  it('compares every quintile against Q3 purchasing power today', () => {
+    const results = quintilePresets.map((preset) => simulate(transformative20Year, preset.household));
+    const reference = results[2];
+    expect(results.map((result) => Math.round(purchasingPowerIndex(result, reference, 0))))
+      .toEqual([23, 63, 100, 162, 347]);
+  });
+
+  it('separates after-tax income from price-adjusted purchasing power', () => {
+    const result = simulate(transformative20Year, quintilePresets[2].household);
+    expect(afterTaxIncomeIndex(result, result, 0)).toBe(100);
+    expect(purchasingPowerIndex(result, result, 0)).toBe(100);
+    expect(afterTaxIncomeIndex(result, result, 20)).not.toBeCloseTo(purchasingPowerIndex(result, result, 20), 5);
   });
 
   it('makes interventions explicit and leaves status quo as the default', () => {
