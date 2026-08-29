@@ -19,6 +19,7 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 - Status quo policy path
 - Purchasing power and after-tax income normalized to Q3 today = 100
 - Probability-density charts for 100 matched weekly employment, income, and purchasing-power paths
+- A 52-week purchasing-power transition buffer after job loss
 - No-AGI comparison path
 - Exact contribution decomposition
 - Labor / capital / government resource composition

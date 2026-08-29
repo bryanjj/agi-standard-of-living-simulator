@@ -151,7 +151,14 @@ export const simulateHouseholdPaths = (
       id: `worker${index}`,
       displacementWeek,
       incomeValues: timeline.map((outcome, week) => week < displacementWeek ? outcome.employedIncome : outcome.displacedIncome),
-      purchasingPowerValues: timeline.map((outcome, week) => week < displacementWeek ? outcome.employedPurchasingPower : outcome.displacedPurchasingPower),
+      purchasingPowerValues: timeline.map((outcome, week) => {
+        if (week < displacementWeek) return outcome.employedPurchasingPower;
+        if (displacementWeek === 0) return outcome.displacedPurchasingPower;
+        const weeksSinceDisplacement = week - displacementWeek;
+        const bufferRemaining = Math.max(0, 1 - weeksSinceDisplacement / calibration.consumptionSmoothingWeeks.value);
+        const preDisplacementPurchasingPower = timeline[displacementWeek - 1].employedPurchasingPower;
+        return outcome.displacedPurchasingPower + bufferRemaining * (preDisplacementPurchasingPower - outcome.displacedPurchasingPower);
+      }),
     };
   });
 };

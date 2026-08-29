@@ -115,14 +115,17 @@ describe('simulate', () => {
     expect(first.every((path) => path.incomeValues[1040] === timeline[1040].displacedIncome)).toBe(true);
   });
 
-  it('applies the same sampled displacement timing to income and purchasing power', () => {
+  it('drops income immediately but smooths purchasing power for one year', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
     const timeline = weeklyHouseholdOutcomes(result, result);
     const paths = simulateHouseholdPaths(result, result, 100, 8);
-    const path = paths[0];
+    const path = paths.find((candidate) => candidate.displacementWeek > 0 && candidate.displacementWeek <= 988);
+    expect(path).toBeDefined();
+    if (!path) throw new Error('Expected a path displaced before the final year');
     const week = path.displacementWeek;
     expect(path.incomeValues[week]).toBeCloseTo(timeline[week].displacedIncome, 10);
-    expect(path.purchasingPowerValues[week]).toBeCloseTo(timeline[week].displacedPurchasingPower, 10);
+    expect(path.purchasingPowerValues[week]).toBeCloseTo(timeline[week - 1].employedPurchasingPower, 10);
+    expect(path.purchasingPowerValues[week + 52]).toBeCloseTo(timeline[week + 52].displacedPurchasingPower, 10);
   });
 
   it('makes interventions explicit and leaves status quo as the default', () => {

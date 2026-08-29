@@ -22,7 +22,7 @@ const notes = {
   purchasingPower: {
     marker: 4,
     name: 'Material purchasing power',
-    definition: 'The simulator’s after-tax household resources divided by its modeled basket price. Q3 today is set to 100. Each path applies the modeled prices to one simulated worker’s income path, and darker overlapping paths indicate more likely outcomes.',
+    definition: 'The simulator’s after-tax household resources divided by its modeled basket price. Q3 today is set to 100. Each path applies modeled prices and a temporary transition buffer to one simulated worker’s income path. Darker overlapping paths indicate more likely outcomes.',
     sources: [],
   },
   incomeIndex: {
@@ -84,6 +84,12 @@ const notes = {
     name: 'Chance of employment',
     definition: 'The initial 95.9% rate is one minus the July 2026 U.S. unemployment rate among the civilian labor force. The simulator then declines this probability smoothly to zero in year 20 and tests each still-employed path weekly. Once displaced, a worker remains displaced.',
     sources: [{ label: 'U.S. Bureau of Labor Statistics', href: 'https://www.bls.gov/cps/latest-numbers.htm' }],
+  },
+  consumptionSmoothing: {
+    marker: 14,
+    name: 'Transition buffer',
+    definition: 'After job loss, the simulator holds purchasing power near its pre-loss level, then moves it linearly toward the lower long-run level over 52 weeks. This represents temporary unemployment benefits and savings drawdown without claiming a measured Q3 savings balance.',
+    sources: [],
   },
 } as const;
 

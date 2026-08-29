@@ -20,7 +20,8 @@ function OutcomeTooltip({ active, label, payload, metric }: { active?: boolean; 
   const datum = payload[0].payload;
   const employed = metric === 'income' ? datum.employedIncome : datum.employedPurchasingPower;
   const displaced = metric === 'income' ? datum.displacedIncome : datum.displacedPurchasingPower;
-  return <div className="income-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${Number(label).toFixed(1)}`}</small><strong>{round(datum.employedChance)}%</strong><span>chance employed</span><b>{round(employed)} if employed · {round(displaced)} if not employed</b></div>;
+  const displacedLabel = metric === 'income' ? 'if not employed' : 'after buffer ends';
+  return <div className="income-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${Number(label).toFixed(1)}`}</small><strong>{round(datum.employedChance)}%</strong><span>chance employed</span><b>{round(employed)} if employed · {round(displaced)} {displacedLabel}</b></div>;
 }
 
 export default function Home() {
@@ -52,7 +53,6 @@ export default function Home() {
 
   const focused = result.years[focusYear];
   const selectedScale = purchasingPowerScale(result, result);
-  const selectedY20 = purchasingPowerOutcomes(result, result, 20).displaced;
   const focusedPurchasingPower = purchasingPowerOutcomes(result, result, focusYear).average;
   const focusedChange = focusedPurchasingPower - 100;
 
@@ -82,8 +82,8 @@ export default function Home() {
         <div className="workspace single-workspace">
           <section className="result-card comparison-card">
             <div className="result-head">
-              <div><p className="section-label"><span>02</span> 100 WEEKLY JOB PATHS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Darker paths are more likely</p></div>
-              <div className="outcome" style={{ color: referencePreset.color }}><strong>{round(selectedY20)}</strong><span>Q3 · YEAR 20<br />Q3 TODAY = 100</span></div>
+              <div><p className="section-label"><span>02</span> 100 WEEKLY JOB PATHS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Darker paths are more likely · <Term note="consumptionSmoothing">52-week buffer</Term></p></div>
+              <div className="outcome" style={{ color: referencePreset.color }}><strong>{calibration.consumptionSmoothingWeeks.value}</strong><span>WEEK TRANSITION<br />AFTER JOB LOSS</span></div>
             </div>
             <div className="chart-wrap comparison-chart" aria-label="One hundred simulated purchasing-power paths for comparable Q3 workers over 20 years">
               <ResponsiveContainer width="100%" height="100%">
@@ -109,7 +109,7 @@ export default function Home() {
               <div><span>YEAR 10</span><strong>{chanceEmployedAt(10).toFixed(1)}%</strong></div><i />
               <div><span>YEAR 20</span><strong>0%</strong></div>
             </div>
-            <p className="simulation-note chart-density-note">The 100 paths use the same worker displacement draws as the income chart. Overlapping paths accumulate color.</p>
+            <p className="simulation-note chart-density-note">The 100 paths use the same job histories as the income chart. After job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown.</p>
           </section>
         </div>
 
@@ -180,7 +180,7 @@ export default function Home() {
       <TermNotes />
 
       <section className="method-section">
-        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Sources and assumptions.</h2><p>The reference household uses Census Q3 mean household income. <Term note="equity">Stock equity</Term> and inferred household traits use the 2022 Survey of Consumer Finances. The initial <Term note="employmentProbability">chance of employment</Term> uses the latest BLS unemployment rate. Cash and other non-equity assets do not receive AI-capital returns. The displayed paths use the simplified status quo assumptions.</p></div>
+        <div><p className="eyebrow">MODEL & SOURCES</p><h2>Sources and assumptions.</h2><p>The reference household uses Census Q3 mean household income. <Term note="equity">Stock equity</Term> and inferred household traits use the 2022 Survey of Consumer Finances. The initial <Term note="employmentProbability">chance of employment</Term> uses the latest BLS unemployment rate. The <Term note="consumptionSmoothing">transition buffer</Term> represents temporary benefits and savings without treating cash as AI capital. The displayed paths use the simplified status quo assumptions.</p></div>
         <div className="source-list">
           <a href="https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-income-households.html" target="_blank" rel="noreferrer"><span>DATA · 2024</span><strong>U.S. Census H-3</strong><small>Mean Q3 household income ↗</small></a>
           <a href="https://www.federalreserve.gov/econres/scfindex.htm" target="_blank" rel="noreferrer"><span>DATA · 2022</span><strong>Survey of Consumer Finances</strong><small>Median stock equity by income group ↗</small></a>

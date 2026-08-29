@@ -11,4 +11,5 @@
 - **Interventions are illustrative.** The safety net, citizen dividend, and public-fund options are simple distribution rules. They do not model administration, behavioral responses, financing, political feasibility, or general-equilibrium effects.
 - **No uncertainty bands yet.** The largest disagreements are exposed as assumptions, but the first milestone provides one named trajectory rather than distributions or sensitivity ranges.
 - **Material purchasing power is not welfare.** The index excludes leisure, involuntary unemployment costs, health, social status, public goods, environmental effects, and political power.
+- **The transition buffer is illustrative.** Purchasing power declines over 52 weeks after displacement to represent temporary benefits and savings drawdown. The model does not estimate liquid savings, benefit eligibility, benefit duration, debt, or household-specific consumption smoothing.
 - **Validation is preliminary.** Karger et al. is documented as a target; a matching rapid-AI scenario and formal comparison are future work.
