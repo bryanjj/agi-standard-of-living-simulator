@@ -4,7 +4,7 @@ import type { Household } from './types';
 import { simulate } from './simulation';
 import { interventions } from '../scenarios/interventions';
 import { quintilePresets } from '../calibration/quintiles';
-import { afterTaxIncomeIndex, purchasingPowerIndex, simulateHouseholdPaths, weeklyHouseholdOutcomes } from './comparison';
+import { aggregateHouseholdPaths, afterTaxIncomeIndex, purchasingPowerIndex, simulateHouseholdPaths, weeklyHouseholdOutcomes } from './comparison';
 
 const household: Household = {
   annualIncome: 85_000,
@@ -126,6 +126,16 @@ describe('simulate', () => {
     expect(path.incomeValues[week]).toBeCloseTo(timeline[week].displacedIncome, 10);
     expect(path.purchasingPowerValues[week]).toBeCloseTo(timeline[week - 1].employedPurchasingPower, 10);
     expect(path.purchasingPowerValues[week + 52]).toBeCloseTo(timeline[week + 52].displacedPurchasingPower, 10);
+  });
+
+  it('combines 1,000 weekly worker paths into weighted four-week display cohorts', () => {
+    const result = simulate(transformative20Year, quintilePresets[2].household);
+    const paths = simulateHouseholdPaths(result, result, 1_000, 8);
+    const cohorts = aggregateHouseholdPaths(paths, 4);
+    expect(paths).toHaveLength(1_000);
+    expect(cohorts.reduce((sum, cohort) => sum + cohort.workerCount, 0)).toBe(1_000);
+    expect(cohorts.length).toBeLessThanOrEqual(261);
+    expect(cohorts.every((cohort) => cohort.incomeValues.length === 1041 && cohort.purchasingPowerValues.length === 1041)).toBe(true);
   });
 
   it('makes interventions explicit and leaves status quo as the default', () => {

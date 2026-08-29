@@ -96,7 +96,7 @@ The aggregate income index uses the same reference point before the modeled pric
 
 `afterTaxIncomeIndex(h,t) = 100 × afterTaxResources(h,t) / afterTaxResources(Q3,0)`
 
-That aggregate path is smooth because it averages displaced and employed workers. The visible income and purchasing-power charts instead contain a fixed Monte Carlo sample of 100 comparable Q3 workers. Each worker starts employed with 95.9% probability. Every week, each still-employed worker faces the conditional displacement hazard required to match the smooth job-probability curve. Once displaced, a worker remains displaced. The worker receives the modeled remaining-worker wage until displacement. At displacement, labor income becomes zero and the household retains modeled stock income, baseline transfers, and the status-quo 10% labor-loss replacement.
+That aggregate path is smooth because it averages displaced and employed workers. The visible income and purchasing-power charts use a fixed Monte Carlo sample of 1,000 comparable Q3 workers. Each worker starts employed with 95.9% probability. Every week, each still-employed worker faces the conditional displacement hazard required to match the smooth job-probability curve. Once displaced, a worker remains displaced. The worker receives the modeled remaining-worker wage until displacement. At displacement, labor income becomes zero and the household retains modeled stock income, baseline transfers, and the status-quo 10% labor-loss replacement. For legibility and rendering performance, workers displaced within the same four-week window are shown as one averaged display cohort whose opacity reflects its worker count.
 
 Purchasing power does not fall immediately to the long-run displaced level. For a worker displaced in week `d`, the simulator records purchasing power just before displacement and applies a one-year transition buffer:
 
@@ -106,7 +106,7 @@ Purchasing power does not fall immediately to the long-run displaced level. For 
 
 This represents temporary unemployment benefits and savings drawdown. The 52-week period is a transparent simulator assumption, not an estimate of a Q3 household's liquid savings. The model does not treat this buffer as stock equity or give it AI-capital returns.
 
-The charts render weekly points rather than annual steps. Individual paths are drawn with very low opacity. Where many paths overlap, their color accumulates, making more probable outcomes darker. There is no median line. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond initial employment and displacement timing.
+The charts render weekly points rather than annual steps. Display cohorts are drawn with opacity based on their worker count. Where likely cohorts overlap, their color accumulates and makes more probable outcomes darker. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond initial employment and displacement timing.
 
 ## 7. Exact decomposition
 

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { calibration } from '../calibration/usBaseline';
 import { quintileById } from '../calibration/quintiles';
-import { purchasingPowerOutcomes, purchasingPowerScale, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
+import { aggregateHouseholdPaths, purchasingPowerOutcomes, purchasingPowerScale, simulateHouseholdPaths, weeklyHouseholdOutcomes } from '../model/comparison';
 import { simulate } from '../model/simulation';
 import { interventions } from '../scenarios/interventions';
 import { transformative20Year } from '../scenarios/transformative20yr';
@@ -14,6 +14,7 @@ import { Term, TermNotes } from '../ui/Terms';
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const compactMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
 const round = (value: number) => Math.round(value);
+const cohortOpacity = (workerCount: number) => 1 - (1 - 0.003) ** workerCount;
 
 function OutcomeTooltip({ active, label, payload, metric }: { active?: boolean; label?: number; payload?: Array<{ payload: Record<string, number> }>; metric: 'income' | 'purchasing power' }) {
   if (!active || !payload?.length) return null;
@@ -31,23 +32,24 @@ export default function Home() {
   const result = useMemo(() => simulate(transformative20Year, referencePreset.household, intervention), [intervention, referencePreset]);
 
   const weeklyOutcomes = useMemo(() => weeklyHouseholdOutcomes(result, result), [result]);
-  const simulatedHouseholdPaths = useMemo(() => simulateHouseholdPaths(result, result, 100, 8), [result]);
+  const simulatedHouseholdPaths = useMemo(() => simulateHouseholdPaths(result, result, 1_000, 8), [result]);
+  const displayedHouseholdPaths = useMemo(() => aggregateHouseholdPaths(simulatedHouseholdPaths, 4), [simulatedHouseholdPaths]);
   const chartData = useMemo(() => weeklyOutcomes.map((outcome, index) => ({
     year: outcome.year,
     baseline: 100 * (1 + calibration.baselineRealGrowth.value) ** outcome.year,
     employedChance: outcome.employmentProbability * 100,
     employedPurchasingPower: outcome.employedPurchasingPower,
     displacedPurchasingPower: outcome.displacedPurchasingPower,
-    ...Object.fromEntries(simulatedHouseholdPaths.map((path) => [`pp${path.id}`, path.purchasingPowerValues[index]])),
-  })), [weeklyOutcomes, simulatedHouseholdPaths]);
+    ...Object.fromEntries(displayedHouseholdPaths.map((path) => [`pp${path.id}`, path.purchasingPowerValues[index]])),
+  })), [weeklyOutcomes, displayedHouseholdPaths]);
 
   const incomeChartData = useMemo(() => weeklyOutcomes.map((outcome, index) => ({
     year: outcome.year,
     employedChance: outcome.employmentProbability * 100,
     employedIncome: outcome.employedIncome,
     displacedIncome: outcome.displacedIncome,
-    ...Object.fromEntries(simulatedHouseholdPaths.map((path) => [path.id, path.incomeValues[index]])),
-  })), [weeklyOutcomes, simulatedHouseholdPaths]);
+    ...Object.fromEntries(displayedHouseholdPaths.map((path) => [path.id, path.incomeValues[index]])),
+  })), [weeklyOutcomes, displayedHouseholdPaths]);
   const chanceEmployedAt = (year: number) => 100 * calibration.currentLaborForceEmploymentRate.value * (1 - year / result.scenario.horizonYears);
   const displacedByYearTen = 100 - chanceEmployedAt(10);
 
@@ -82,10 +84,10 @@ export default function Home() {
         <div className="workspace single-workspace">
           <section className="result-card comparison-card">
             <div className="result-head">
-              <div><p className="section-label"><span>02</span> 100 WEEKLY JOB PATHS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Darker paths are more likely · <Term note="consumptionSmoothing">52-week buffer</Term></p></div>
+              <div><p className="section-label"><span>02</span> 1,000 SIMULATED WORKERS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Q3 today = 100 · Darker paths are more likely · <Term note="consumptionSmoothing">52-week buffer</Term></p></div>
               <div className="outcome" style={{ color: referencePreset.color }}><strong>{calibration.consumptionSmoothingWeeks.value}</strong><span>WEEK TRANSITION<br />AFTER JOB LOSS</span></div>
             </div>
-            <div className="chart-wrap comparison-chart" aria-label="One hundred simulated purchasing-power paths for comparable Q3 workers over 20 years">
+            <div className="chart-wrap comparison-chart" aria-label="Purchasing-power outcomes for one thousand simulated comparable Q3 workers over 20 years">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 12, right: 16, bottom: 3, left: 54 }}>
                   <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
@@ -94,7 +96,7 @@ export default function Home() {
                     <Label value="Purchasing power · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                   </YAxis>
                   <Tooltip content={<OutcomeTooltip metric="purchasing power" />} />
-                  {simulatedHouseholdPaths.map((path) => <Line key={`pp${path.id}`} type="linear" dataKey={`pp${path.id}`} name="Simulated worker" stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={0.028} dot={false} activeDot={false} isAnimationActive={false} />)}
+                  {displayedHouseholdPaths.map((path) => <Line key={`pp${path.id}`} type="linear" dataKey={`pp${path.id}`} name={`${path.workerCount} simulated workers`} stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={cohortOpacity(path.workerCount)} dot={false} activeDot={false} isAnimationActive={false} />)}
                   <Line type="monotone" dataKey="baseline" name="No-AGI baseline" stroke="#8b8d88" strokeWidth={1.25} strokeDasharray="5 5" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -109,16 +111,16 @@ export default function Home() {
               <div><span>YEAR 10</span><strong>{chanceEmployedAt(10).toFixed(1)}%</strong></div><i />
               <div><span>YEAR 20</span><strong>0%</strong></div>
             </div>
-            <p className="simulation-note chart-density-note">The 100 paths use the same job histories as the income chart. After job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown.</p>
+            <p className="simulation-note chart-density-note">The 1,000 simulated workers use the same job histories as the income chart. Nearby displacement weeks are combined into four-week display cohorts, weighted by the number of workers in each cohort. After job loss, purchasing power starts near its pre-loss level and converges to the lower long-run level over 52 weeks, representing temporary benefits and savings drawdown.</p>
           </section>
         </div>
 
         <section className="result-card income-chart-card">
           <div className="result-head">
-            <div><p className="section-label">100 WEEKLY JOB PATHS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">95.9% employed today</Term> · 0% in year 20</p></div>
+            <div><p className="section-label">1,000 SIMULATED WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition"><Term note="employmentProbability">95.9% employed today</Term> · 0% in year 20</p></div>
             <div className="displacement-callout"><strong>{round(displacedByYearTen)}%</strong><span>MODELED CHANCE<br />NOT EMPLOYED BY YEAR 10</span></div>
           </div>
-          <div className="chart-wrap income-chart" aria-label="One hundred simulated after-tax income paths for comparable Q3 workers over 20 years">
+          <div className="chart-wrap income-chart" aria-label="After-tax income outcomes for one thousand simulated comparable Q3 workers over 20 years">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={incomeChartData} margin={{ top: 12, right: 16, bottom: 3, left: 54 }}>
                 <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
@@ -127,13 +129,13 @@ export default function Home() {
                   <Label value="After-tax income · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                 </YAxis>
                 <Tooltip content={<OutcomeTooltip metric="income" />} />
-                {simulatedHouseholdPaths.map((path) => <Line key={path.id} type="linear" dataKey={path.id} name="Simulated worker" stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={0.028} dot={false} activeDot={false} isAnimationActive={false} />)}
+                {displayedHouseholdPaths.map((path) => <Line key={path.id} type="linear" dataKey={path.id} name={`${path.workerCount} simulated workers`} stroke={referencePreset.color} strokeWidth={1.2} strokeOpacity={cohortOpacity(path.workerCount)} dot={false} activeDot={false} isAnimationActive={false} />)}
               </LineChart>
             </ResponsiveContainer>
           </div>
           <div className="quintile-legend single-legend probability-legend income-legend"><span className="density-key"><i /> Darker = more likely</span></div>
           <div className="displacement-probabilities" aria-label="Chance of having a job"><span><small>TODAY</small><strong>{round(chanceEmployedAt(0))}%</strong></span><span><small>YEAR 5</small><strong>{round(chanceEmployedAt(5))}%</strong></span><span><small>YEAR 10</small><strong>{round(chanceEmployedAt(10))}%</strong></span><span><small>YEAR 15</small><strong>{round(chanceEmployedAt(15))}%</strong></span><span><small>YEAR 20</small><strong>0%</strong></span></div>
-          <p className="simulation-note">Each currently employed path faces a new displacement draw every week. The chance of employment declines smoothly from 95.9% today to 0% in year 20. Once displaced, a worker remains displaced. Labor income falls to $0; stock income and status-quo support keep total household income above $0.</p>
+          <p className="simulation-note">Each of the 1,000 simulated workers faces a new displacement draw every week while employed. The chart combines nearby displacement weeks into four-week display cohorts. The chance of employment declines smoothly from 95.9% today to 0% in year 20. Once displaced, a worker remains displaced. Labor income falls to $0; stock income and status-quo support keep total household income above $0.</p>
         </section>
       </section>
 

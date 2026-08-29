@@ -31,6 +31,10 @@ export type SimulatedHouseholdPath = {
   purchasingPowerValues: number[];
 };
 
+export type SimulatedHouseholdCohort = SimulatedHouseholdPath & {
+  workerCount: number;
+};
+
 export type WeeklyHouseholdOutcome = {
   year: number;
   employmentProbability: number;
@@ -161,4 +165,36 @@ export const simulateHouseholdPaths = (
       }),
     };
   });
+};
+
+export const aggregateHouseholdPaths = (
+  paths: SimulatedHouseholdPath[],
+  weeksPerCohort = 4,
+): SimulatedHouseholdCohort[] => {
+  if (weeksPerCohort < 1) throw new Error('weeksPerCohort must be at least 1');
+
+  const groups = new Map<number, SimulatedHouseholdPath[]>();
+  for (const path of paths) {
+    const cohortKey = path.displacementWeek === 0
+      ? -1
+      : Math.floor((path.displacementWeek - 1) / weeksPerCohort);
+    const group = groups.get(cohortKey) ?? [];
+    group.push(path);
+    groups.set(cohortKey, group);
+  }
+
+  return [...groups.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([cohortKey, members]) => {
+      const averageAt = (values: 'incomeValues' | 'purchasingPowerValues', week: number) => (
+        members.reduce((sum, member) => sum + member[values][week], 0) / members.length
+      );
+      return {
+        id: `cohort${cohortKey}`,
+        displacementWeek: Math.round(members.reduce((sum, member) => sum + member.displacementWeek, 0) / members.length),
+        workerCount: members.length,
+        incomeValues: members[0].incomeValues.map((_, week) => averageAt('incomeValues', week)),
+        purchasingPowerValues: members[0].purchasingPowerValues.map((_, week) => averageAt('purchasingPowerValues', week)),
+      };
+    });
 };
