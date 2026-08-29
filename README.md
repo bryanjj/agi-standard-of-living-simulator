@@ -21,6 +21,7 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 - Status quo policy path
 - A 30-year display horizon with employment at 50% in year 10 and approaching, but never reaching, zero
 - Purchasing power and after-tax income normalized so the sample mean today = 100
+- A modeled SPM-aligned poverty chart based on rolling 52-week resources and 2025 BLS housing-tenure thresholds
 - Probability-density charts for 1,000 matched weekly employment, income, and purchasing-power paths, shown through 250 weighted representative paths with a mean across all 1,000 samples
 - Weekly job loss and reemployment, with the chance of finding work declining asymptotically
 - Unemployment insurance replacing 42.2% of worker wages for 16 weeks after each job loss

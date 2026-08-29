@@ -6,6 +6,7 @@ import { interventions } from '../scenarios/interventions';
 import { quintilePresets } from '../calibration/quintiles';
 import { afterTaxIncomeIndex, aggregateSimulationResults, meanHouseholdPath, purchasingPowerIndex, sampleHouseholdPaths, simulateHouseholdPaths, simulatePopulationPaths, weeklyHouseholdOutcomes } from './comparison';
 import { employmentProbabilityAtYear } from './employment';
+import { spmEquivalenceScale, spmPopulationOutcomes, spmThreshold } from './spm';
 
 const household: Household = {
   annualIncome: 85_000,
@@ -112,7 +113,7 @@ describe('simulate', () => {
     const second = simulateHouseholdPaths(result, result, 1_000, 2026);
     expect(first).toEqual(second);
     expect(first).toHaveLength(1_000);
-    expect(first.every((path) => path.employmentValues.length === 1561 && path.incomeValues.length === 1561 && path.purchasingPowerValues.length === 1561)).toBe(true);
+    expect(first.every((path) => path.employmentValues.length === 1561 && path.incomeValues.length === 1561 && path.resourceValues.length === 1561 && path.purchasingPowerValues.length === 1561)).toBe(true);
     expect(first.some((path) => path.reemploymentWeeks.length > 0)).toBe(true);
     expect(first.every((path) => path.reemploymentWeeks.every((week) => path.employmentValues[week]))).toBe(true);
     const employedShare = (week: number) => first.filter((path) => path.employmentValues[week]).length / first.length;
@@ -192,6 +193,31 @@ describe('simulate', () => {
       expect(100 + Object.values(year.decomposition).reduce((sum, value) => sum + value, 0))
         .toBeCloseTo(year.standardOfLiving, 10);
     }
+  });
+
+  it('calculates a modeled SPM-aligned poverty rate from rolling annual resources', () => {
+    const results = quintilePresets.map((preset) => simulate(transformative20Year, preset.household));
+    const population = simulatePopulationPaths(
+      quintilePresets.map((preset, index) => ({ id: preset.id, result: results[index], weight: 0.2 })),
+      1_000,
+      8,
+    );
+    const profiles = quintilePresets.map((preset) => ({
+      id: preset.id,
+      housing: preset.household.housing,
+      adults: Math.min(2, preset.household.householdSize),
+      children: Math.max(0, preset.household.householdSize - 2),
+    }));
+    const outcomes = spmPopulationOutcomes(population.paths, profiles);
+    expect(spmEquivalenceScale(2, 0)).toBeCloseTo(Math.sqrt(2), 10);
+    expect(spmEquivalenceScale(2, 1)).toBeCloseTo(2.5 ** 0.7, 10);
+    expect(spmThreshold(profiles[0])).toBeCloseTo(41_701 * Math.sqrt(2) / (3 ** 0.7), 10);
+    expect(outcomes).toHaveLength(1561);
+    expect(outcomes[0].povertyRate).toBeGreaterThan(10);
+    expect(outcomes[0].povertyRate).toBeLessThan(40);
+    expect(outcomes[1040].povertyRate).toBeGreaterThan(outcomes[0].povertyRate);
+    expect(outcomes.every((outcome) => outcome.deepPovertyRate <= outcome.povertyRate)).toBe(true);
+    expect(outcomes.every((outcome) => outcome.povertyRate >= 0 && outcome.povertyRate <= 100)).toBe(true);
   });
 
   it('makes interventions explicit and leaves status quo as the default', () => {

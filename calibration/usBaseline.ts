@@ -25,6 +25,18 @@ export const calibration = {
     value: 16, provenance: 'DATA', source: 'U.S. Department of Labor, regular UI dashboard, 12 months ending July 2026', year: 2026,
     note: 'Rounded from the 15.74-week average duration in the regular unemployment insurance program.',
   },
+  spmRenterThreshold2025: {
+    value: 41_701, provenance: 'DATA', source: 'U.S. Bureau of Labor Statistics, 2025 Research Supplemental Poverty Measure thresholds', year: 2025,
+    note: 'National two-adult, two-child reference threshold for renters, finalized August 2026.',
+  },
+  spmMortgageThreshold2025: {
+    value: 41_323, provenance: 'DATA', source: 'U.S. Bureau of Labor Statistics, 2025 Research Supplemental Poverty Measure thresholds', year: 2025,
+    note: 'National two-adult, two-child reference threshold for owners with mortgages, finalized August 2026.',
+  },
+  spmOwnerThreshold2025: {
+    value: 34_326, provenance: 'DATA', source: 'U.S. Bureau of Labor Statistics, 2025 Research Supplemental Poverty Measure thresholds', year: 2025,
+    note: 'National two-adult, two-child reference threshold for owners without mortgages, finalized August 2026.',
+  },
   initialWeeklyReemploymentProbability: {
     value: 1 / 15.74, provenance: 'ASSUMPTION', source: 'Calibration from U.S. Department of Labor average regular UI duration', year: 2026,
     note: 'Uses the inverse of average compensated duration as a simple initial weekly job-finding proxy, then declines to zero with the scenario employment path.',

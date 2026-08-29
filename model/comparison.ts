@@ -33,6 +33,7 @@ export type SimulatedHouseholdPath = {
   jobLossWeeks: number[];
   reemploymentWeeks: number[];
   incomeValues: number[];
+  resourceValues: number[];
   purchasingPowerValues: number[];
 };
 
@@ -226,6 +227,7 @@ export const simulateHouseholdPaths = (
       jobLossWeeks,
       reemploymentWeeks,
       incomeValues,
+      resourceValues: incomeValues.map((value) => value * afterTaxResources(reference.years[0]) / 100),
       purchasingPowerValues,
     };
   });
@@ -265,6 +267,7 @@ export const simulatePopulationPaths = (
     ...path,
     id: `worker${index}`,
     incomeValues: path.incomeValues.map((value) => value * normalization),
+    resourceValues: path.resourceValues,
     purchasingPowerValues: path.purchasingPowerValues.map((value) => value * normalization),
   }));
 

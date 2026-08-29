@@ -94,6 +94,15 @@ const notes = {
       { label: 'DOL UI dashboard', href: 'https://oui.doleta.gov/unemploy/DataDashboard.asp' },
     ],
   },
+  modeledSpm: {
+    marker: 15,
+    name: 'Modeled SPM-aligned poverty rate',
+    definition: 'The share of sampled worker households whose rolling 52-week modeled after-tax cash resources fall below a 2025 BLS Supplemental Poverty Measure threshold adjusted for modeled family size, housing tenure, and prices. Geography, noncash benefits, medical costs, childcare, work expenses, and detailed tax credits are omitted, so this is not the official SPM.',
+    sources: [
+      { label: 'BLS thresholds', href: 'https://www.bls.gov/pir/spm/spm_thresholds_2025.htm' },
+      { label: 'Census SPM method', href: 'https://www.census.gov/newsroom/blogs/random-samplings/2020/09/supplemental-poverty-measure.html' },
+    ],
+  },
 } as const;
 
 export type TermId = keyof typeof notes;

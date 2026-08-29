@@ -120,6 +120,20 @@ Unemployment insurance therefore cushions purchasing power during its 16-week mo
 
 The charts render weekly points rather than annual steps. Representative paths are drawn with opacity based on the number of simulated workers they represent. Where likely paths overlap, their color accumulates and makes more probable outcomes darker. A separate dark line shows the arithmetic mean across all 1,000 simulated workers at every week for income and purchasing power. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond initial employment, job loss, and reemployment timing.
 
+### Modeled SPM-aligned poverty rate
+
+The poverty view compares each sampled worker household's rolling 52-week modeled after-tax cash resources with a 2025 BLS Research Supplemental Poverty Measure threshold. The national two-adult, two-child reference thresholds are $41,701 for renters, $41,323 for owners with mortgages, and $34,326 for owners without mortgages.
+
+The simulator uses the official three-parameter equivalence scale. For the current profiles, a two-person household is assumed to contain two adults and a three-person household is assumed to contain two adults and one child:
+
+`scale(two adults) = 2^0.5`
+
+`scale(two adults, one child) = (2 + 0.5)^0.7`
+
+Each scale is divided by the two-adult, two-child reference scale `(2 + 0.5 × 2)^0.7`. The resulting tenure and family-size threshold is multiplied by that worker's modeled household basket price at each week. Rolling resources are the average of the worker's annualized weekly resources over the latest 52 weeks; before week 52, the missing pre-simulation weeks use the worker's initial resource level.
+
+The displayed rate is the share of sampled worker households whose rolling resources are below their modeled threshold. “Below half the threshold” is shown separately. This is not an official SPM estimate because the model omits geography, noncash benefits, medical costs, childcare, work expenses, child support, payroll taxes, and detailed tax credits.
+
 ## 7. Exact decomposition
 
 Labor, capital, transfers, and tax contributions are their after-tax-resource changes, each divided by the future basket price. Price effects are split exactly between reproducible productivity and pressure from irreproducible scarce factors. Therefore:

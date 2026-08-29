@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { calibration } from '../calibration/usBaseline';
 import { quintilePresets } from '../calibration/quintiles';
 import { aggregateSimulationResults, meanHouseholdPath, sampleHouseholdPaths, simulatePopulationPaths, weeklyHouseholdOutcomes } from '../model/comparison';
 import { employmentProbabilityAtYear } from '../model/employment';
 import { simulate } from '../model/simulation';
+import { spmPopulationOutcomes, type SpmWeeklyOutcome } from '../model/spm';
 import { interventions } from '../scenarios/interventions';
 import { transformative20Year } from '../scenarios/transformative20yr';
 import { Affordability, MacroDetails, ResourceComposition, WhyChart } from '../ui/Explanations';
@@ -17,12 +18,24 @@ const compactMoney = new Intl.NumberFormat('en-US', { style: 'currency', currenc
 const round = (value: number) => Math.round(value);
 const pathOpacity = (workerCount: number) => 1 - (1 - 0.003) ** workerCount;
 const profileColorById = Object.fromEntries(quintilePresets.map((preset) => [preset.id, preset.color]));
+const spmProfiles = quintilePresets.map((preset) => ({
+  id: preset.id,
+  housing: preset.household.housing,
+  adults: Math.min(2, preset.household.householdSize),
+  children: Math.max(0, preset.household.householdSize - 2),
+}));
 
 function OutcomeTooltip({ active, label, payload, metric }: { active?: boolean; label?: number; payload?: Array<{ payload: Record<string, number> }>; metric: 'income' | 'purchasing power' }) {
   if (!active || !payload?.length) return null;
   const datum = payload[0].payload;
   const mean = metric === 'income' ? datum.meanIncome : datum.meanPurchasingPower;
   return <div className="income-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${Number(label).toFixed(1)}`}</small><strong>{round(mean)}</strong><span>sample mean</span><b>{round(datum.employedChance)}% modeled chance employed</b></div>;
+}
+
+function SpmTooltip({ active, label, payload }: { active?: boolean; label?: number; payload?: Array<{ payload: SpmWeeklyOutcome }> }) {
+  if (!active || !payload?.length) return null;
+  const datum = payload[0].payload;
+  return <div className="income-tooltip poverty-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${Number(label).toFixed(1)}`}</small><strong>{round(datum.povertyRate)}%</strong><span>below modeled threshold</span><b>{round(datum.deepPovertyRate)}% below half · {datum.medianCoverage.toFixed(2)}× median coverage</b><em>{money.format(datum.meanAnnualResources)} mean resources · {money.format(datum.meanThreshold)} mean threshold</em></div>;
 }
 
 export default function Home() {
@@ -41,6 +54,7 @@ export default function Home() {
   const weeklyOutcomes = useMemo(() => weeklyHouseholdOutcomes(quintileResults[2], quintileResults[2]), [quintileResults]);
   const simulatedHouseholdPaths = populationSimulation.paths;
   const simulationMean = useMemo(() => meanHouseholdPath(simulatedHouseholdPaths), [simulatedHouseholdPaths]);
+  const spmOutcomes = useMemo(() => spmPopulationOutcomes(simulatedHouseholdPaths, spmProfiles), [simulatedHouseholdPaths]);
   const displayedHouseholdPaths = useMemo(() => sampleHouseholdPaths(simulatedHouseholdPaths, 250), [simulatedHouseholdPaths]);
   const chartData = useMemo(() => weeklyOutcomes.map((outcome, index) => ({
     year: outcome.year,
@@ -62,6 +76,7 @@ export default function Home() {
     return chance < 0.1 ? '<0.1%' : `${chance.toFixed(1)}%`;
   };
   const displacedByYearTen = 100 - chanceEmployedAt(10);
+  const spmAt = (year: number) => spmOutcomes[year * 52];
 
   const focused = result.years[focusYear];
   const focusedChange = focused.standardOfLiving - 100;
@@ -89,10 +104,34 @@ export default function Home() {
           <div><span>SAMPLING</span><strong>Fixed seed</strong></div>
         </section>
 
+        <section className="result-card poverty-chart-card">
+          <div className="result-head">
+            <div><p className="section-label"><span>02</span> MODELED SPM-ALIGNED POVERTY</p><h2><Term note="modeledSpm">Share below basic needs</Term></h2><p className="axis-definition">Rolling 52-week resources · National thresholds · Sampled worker households</p></div>
+            <div className="displacement-callout"><strong>{round(spmAt(10).povertyRate)}%</strong><span>BELOW MODELED<br />THRESHOLD IN YEAR 10</span></div>
+          </div>
+          <div className="chart-wrap poverty-chart" aria-label="Share of sampled worker households below the modeled SPM-aligned poverty threshold over 30 years">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={spmOutcomes} margin={{ top: 12, right: 16, bottom: 3, left: 54 }}>
+                <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
+                <XAxis type="number" dataKey="year" domain={[0,30]} ticks={[0,10,20,30]} tickFormatter={(v) => v === 0 ? 'Today' : `Yr ${v}`} axisLine={false} tickLine={false} />
+                <YAxis domain={[0,100]} ticks={[0,25,50,75,100]} tickFormatter={(v) => `${v}%`} axisLine={false} tickLine={false} width={42}>
+                  <Label value="Share of sampled worker households" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
+                </YAxis>
+                <Tooltip content={<SpmTooltip />} />
+                <Area type="monotone" dataKey="povertyRate" name="Below modeled threshold" stroke="#c85b2f" strokeWidth={3} fill="#c85b2f" fillOpacity={0.17} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="deepPovertyRate" name="Below half the threshold" stroke="#742f25" strokeWidth={1.75} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="quintile-legend single-legend poverty-legend"><span className="poverty-key"><i /> Below modeled threshold</span><span className="deep-poverty-key"><i /> Below half the threshold</span></div>
+          <div className="displacement-probabilities poverty-milestones" aria-label="Modeled poverty rate"><span><small>TODAY</small><strong>{round(spmAt(0).povertyRate)}%</strong></span><span><small>YEAR 10</small><strong>{round(spmAt(10).povertyRate)}%</strong></span><span><small>YEAR 20</small><strong>{round(spmAt(20).povertyRate)}%</strong></span><span><small>YEAR 30</small><strong>{round(spmAt(30).povertyRate)}%</strong></span></div>
+          <p className="simulation-note">This first version compares each worker household&apos;s rolling 52-week modeled after-tax resources with the latest BLS SPM threshold for its housing tenure, adjusted using the official family-size scale and the simulator&apos;s prices. Two-person profiles assume two adults; three-person profiles assume two adults and one child. Geography, noncash benefits, medical costs, childcare, work expenses, and detailed tax credits are omitted, so this is not the official SPM.</p>
+        </section>
+
         <div className="workspace single-workspace">
           <section className="result-card comparison-card">
             <div className="result-head">
-              <div><p className="section-label"><span>02</span> 1,000 SAMPLED U.S. WORKERS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Sample mean today = 100 · Dark line is the mean · No savings buffer</p></div>
+              <div><p className="section-label"><span>03</span> 1,000 SAMPLED U.S. WORKERS</p><h2><Term note="purchasingPower">Likely purchasing power</Term></h2><p className="axis-definition">Sample mean today = 100 · Dark line is the mean · No savings buffer</p></div>
               <div className="outcome"><strong>{calibration.unemploymentBenefitWeeks.value}</strong><span>WEEKS OF UI<br />AFTER JOB LOSS</span></div>
             </div>
             <div className="chart-wrap comparison-chart" aria-label="Purchasing-power outcomes for one thousand sampled U.S. workers over 30 years">
@@ -196,6 +235,8 @@ export default function Home() {
       <section className="method-section">
         <div><p className="eyebrow">MODEL & SOURCES</p><h2>Sources and assumptions.</h2><p>Each sampled worker randomly draws one of five equally sized Census household-income quintiles. <Term note="equity">Stock equity</Term> and inferred household traits use the 2022 Survey of Consumer Finances. The initial <Term note="employmentProbability">chance of employment</Term> uses the latest BLS unemployment rate. <Term note="unemploymentInsurance">Unemployment insurance</Term> uses national Department of Labor averages.</p></div>
         <div className="source-list">
+          <a href="https://www.bls.gov/pir/spm/spm_thresholds_2025.htm" target="_blank" rel="noreferrer"><span>DATA · 2025</span><strong>BLS SPM thresholds</strong><small>Housing-tenure reference thresholds ↗</small></a>
+          <a href="https://www.census.gov/newsroom/blogs/random-samplings/2020/09/supplemental-poverty-measure.html" target="_blank" rel="noreferrer"><span>METHOD</span><strong>Supplemental Poverty Measure</strong><small>Resources and necessary expenses ↗</small></a>
           <a href="https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-income-households.html" target="_blank" rel="noreferrer"><span>DATA · 2024</span><strong>U.S. Census H-3</strong><small>Mean household income for each quintile ↗</small></a>
           <a href="https://www.federalreserve.gov/econres/scfindex.htm" target="_blank" rel="noreferrer"><span>DATA · 2022</span><strong>Survey of Consumer Finances</strong><small>Median stock equity by income group ↗</small></a>
           <a href="https://www.bls.gov/cps/latest-numbers.htm" target="_blank" rel="noreferrer"><span>DATA · JUL 2026</span><strong>U.S. Bureau of Labor Statistics</strong><small>4.1% unemployment rate ↗</small></a>
