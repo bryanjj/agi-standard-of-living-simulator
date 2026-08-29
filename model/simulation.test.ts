@@ -4,7 +4,7 @@ import type { Household } from './types';
 import { simulate } from './simulation';
 import { interventions } from '../scenarios/interventions';
 import { quintilePresets } from '../calibration/quintiles';
-import { afterTaxIncomeIndex, incomeOutcomes, purchasingPowerIndex, purchasingPowerOutcomes, simulateHouseholdPaths } from './comparison';
+import { afterTaxIncomeIndex, purchasingPowerIndex, simulateHouseholdPaths, weeklyHouseholdOutcomes } from './comparison';
 
 const household: Household = {
   annualIncome: 85_000,
@@ -92,33 +92,37 @@ describe('simulate', () => {
     expect(afterTaxIncomeIndex(result, result, 20)).not.toBeCloseTo(purchasingPowerIndex(result, result, 20), 5);
   });
 
-  it('switches the median worker to the displaced outcome at the 50% threshold', () => {
+  it('declines smoothly from the current employment rate to zero', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
-    const yearNine = incomeOutcomes(result, result, 9);
-    const yearTen = incomeOutcomes(result, result, 10);
-    expect(yearNine.displacementProbability).toBeCloseTo(0.45, 10);
-    expect(yearNine.median).toBe(yearNine.employed);
-    expect(yearTen.displacementProbability).toBeCloseTo(0.5, 10);
-    expect(yearTen.median).toBe(yearTen.displaced);
-    expect(yearTen.displaced).toBeLessThan(20);
+    const timeline = weeklyHouseholdOutcomes(result, result);
+    expect(timeline[0].employmentProbability).toBeCloseTo(0.959, 10);
+    expect(timeline[520].employmentProbability).toBeCloseTo(0.4795, 10);
+    expect(timeline[1040].employmentProbability).toBe(0);
+    for (let week = 1; week < timeline.length; week += 1) {
+      expect(timeline[week].employmentProbability).toBeLessThan(timeline[week - 1].employmentProbability);
+    }
   });
 
-  it('creates stable Monte Carlo paths with one abrupt displacement year each', () => {
+  it('creates stable weekly Monte Carlo paths with one irreversible displacement', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
     const first = simulateHouseholdPaths(result, result, 100, 2026);
     const second = simulateHouseholdPaths(result, result, 100, 2026);
     expect(first).toEqual(second);
     expect(first).toHaveLength(100);
-    expect(first.every((path) => path.displacementYear >= 1 && path.displacementYear <= 20)).toBe(true);
+    expect(first.every((path) => path.displacementWeek >= 0 && path.displacementWeek <= 1040)).toBe(true);
+    expect(first.every((path) => path.incomeValues.length === 1041 && path.purchasingPowerValues.length === 1041)).toBe(true);
+    const timeline = weeklyHouseholdOutcomes(result, result);
+    expect(first.every((path) => path.incomeValues[1040] === timeline[1040].displacedIncome)).toBe(true);
   });
 
   it('applies the same sampled displacement timing to income and purchasing power', () => {
     const result = simulate(transformative20Year, quintilePresets[2].household);
+    const timeline = weeklyHouseholdOutcomes(result, result);
     const paths = simulateHouseholdPaths(result, result, 100, 8);
     const path = paths[0];
-    const year = path.displacementYear;
-    expect(path.incomeValues[year]).toBeCloseTo(incomeOutcomes(result, result, year).displaced, 10);
-    expect(path.purchasingPowerValues[year]).toBeCloseTo(purchasingPowerOutcomes(result, result, year).displaced, 10);
+    const week = path.displacementWeek;
+    expect(path.incomeValues[week]).toBeCloseTo(timeline[week].displacedIncome, 10);
+    expect(path.purchasingPowerValues[week]).toBeCloseTo(timeline[week].displacedPurchasingPower, 10);
   });
 
   it('makes interventions explicit and leaves status quo as the default', () => {

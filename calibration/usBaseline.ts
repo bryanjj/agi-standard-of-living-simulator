@@ -1,6 +1,10 @@
 import type { HousingStatus, SourcedValue } from '../model/types';
 
 export const calibration = {
+  currentLaborForceEmploymentRate: {
+    value: 0.959, provenance: 'DATA', source: 'U.S. Bureau of Labor Statistics, Current Population Survey, July 2026', year: 2026,
+    note: 'One minus the 4.1% seasonally adjusted unemployment rate; used as the initial chance that a modeled worker has a job.',
+  },
   baselineLaborShare: {
     value: 0.59, provenance: 'ASSUMPTION', source: 'Milestone-one model calibration',
     note: 'Rounded U.S. labor share used only as the starting factor-income split.',

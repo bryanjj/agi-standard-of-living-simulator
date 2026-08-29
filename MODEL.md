@@ -12,6 +12,12 @@ For year `t` from 0 to 20:
 
 This encodes the named scenario: five percentage points of the original workforce become automatable each year, no replacement jobs, and full automation in year 20.
 
+For the household Monte Carlo charts, the chance that a modeled worker has a job is separate from this normalized macro employment index:
+
+`jobProbability(t) = 0.959 × (1 − t / 20)`
+
+The 95.9% starting point is one minus the BLS July 2026 unemployment rate. It describes employment among the civilian labor force, not the employment-to-population ratio. The probability declines continuously to zero in year 20.
+
 ## 2. Output and factor shares
 
 `output(t) = 1 + (10 − 1) × automation(t)²`
@@ -90,9 +96,9 @@ The aggregate income index uses the same reference point before the modeled pric
 
 `afterTaxIncomeIndex(h,t) = 100 × afterTaxResources(h,t) / afterTaxResources(Q3,0)`
 
-That aggregate path is smooth because it averages displaced and employed workers. The visible income and purchasing-power charts instead contain a fixed Monte Carlo sample of 100 comparable Q3 workers. For each worker, one displacement draw is mapped onto the scenario's cumulative automation path. A worker receives the modeled remaining-worker wage until displacement. At displacement, labor income becomes zero and the household retains modeled stock income, baseline transfers, and the status-quo 10% labor-loss replacement. The purchasing-power path divides that worker's after-tax resources by the same modeled household basket price used by the aggregate model.
+That aggregate path is smooth because it averages displaced and employed workers. The visible income and purchasing-power charts instead contain a fixed Monte Carlo sample of 100 comparable Q3 workers. Each worker starts employed with 95.9% probability. Every week, each still-employed worker faces the conditional displacement hazard required to match the smooth job-probability curve. Once displaced, a worker remains displaced. The worker receives the modeled remaining-worker wage until displacement. At displacement, labor income becomes zero and the household retains modeled stock income, baseline transfers, and the status-quo 10% labor-loss replacement. The purchasing-power path divides that worker's after-tax resources by the same modeled household basket price used by the aggregate model.
 
-The bold path is the median outcome. It follows the employed outcome while cumulative displacement is below 50%, then switches to the displaced outcome at year 10. Individual paths are drawn with very low opacity. Where many paths overlap, their color accumulates, making more probable outcomes darker. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond displacement timing.
+The charts render weekly points rather than annual steps. Individual paths are drawn with very low opacity. Where many paths overlap, their color accumulates, making more probable outcomes darker. There is no median line. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond initial employment and displacement timing.
 
 ## 7. Exact decomposition
 

@@ -28,7 +28,7 @@ const notes = {
   incomeIndex: {
     marker: 5,
     name: 'Modeled household income',
-    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each line is a fixed Monte Carlo draw of a worker’s displacement year. Labor income becomes zero after displacement; total household income can remain above zero because of stock income and government support. Darker overlapping paths indicate more likely outcomes.',
+    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each line is one fixed weekly Monte Carlo path. Labor income becomes zero after displacement; total household income can remain above zero because of stock income and government support. Darker overlapping paths indicate more likely outcomes.',
     sources: [],
   },
   noAgi: {
@@ -78,6 +78,12 @@ const notes = {
     name: 'Real output and average wage indexes',
     definition: 'Real output is modeled production relative to today. Average wage is modeled labor income per remaining unit of original employment. Both are calculated indexes, not dollar forecasts.',
     sources: [{ label: 'Korinek & Suh', href: 'https://www.nber.org/papers/w32255' }],
+  },
+  employmentProbability: {
+    marker: 13,
+    name: 'Chance of employment',
+    definition: 'The initial 95.9% rate is one minus the July 2026 U.S. unemployment rate among the civilian labor force. The simulator then declines this probability smoothly to zero in year 20 and tests each still-employed path weekly. Once displaced, a worker remains displaced.',
+    sources: [{ label: 'U.S. Bureau of Labor Statistics', href: 'https://www.bls.gov/cps/latest-numbers.htm' }],
   },
 } as const;
 

@@ -16,6 +16,8 @@ U.S. Census Bureau, [Historical Income Table H-3](https://www.census.gov/data/ta
 
 Federal Reserve Board, [2022 Survey of Consumer Finances public summary extract](https://www.federalreserve.gov/econres/scfindex.htm). The simulator calculates survey-weighted median direct and indirect stock equity from the extract's `EQUITY` measure by SCF income-percentile group: $0, $0, $3,300, $22,750, and $257,050. The fifth preset combines the top two SCF groups. Cash, deposits, bonds, housing, and other non-equity assets are excluded from the modeled AI-capital claim. The same extract supplies the rounded household-size proxy and modal tenure. Amounts remain in 2022 dollars.
 
+U.S. Bureau of Labor Statistics, [CPS Latest Numbers](https://www.bls.gov/cps/latest-numbers.htm), July 2026. The seasonally adjusted unemployment rate was 4.1%, so the simulator starts a modeled labor-force participant with a 95.9% chance of employment. This is distinct from the 58.9% employment-to-population ratio.
+
 ## Assumptions
 
 All remaining values, including tax bands, benefit replacement, dividend shares, household income-composition inference, price pass-through, housing shares and hedges, the output curve, and the no-AGI path, are marked **ASSUMPTION** in code and listed in the UI. They are not presented as measured estimates.

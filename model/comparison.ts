@@ -1,5 +1,6 @@
 import type { SimulationResult, SimulationYear } from './types';
 import { effectiveTaxRate } from './simulation';
+import { calibration } from '../calibration/usBaseline';
 
 export const afterTaxResources = (year: SimulationYear) => year.laborIncome + year.capitalIncome + year.transfers - year.taxes;
 
@@ -16,18 +17,28 @@ export const purchasingPowerScale = (result: SimulationResult, reference: Simula
 );
 
 export type IncomeOutcomes = {
+  employmentProbability: number;
   displacementProbability: number;
   employed: number;
   displaced: number;
   average: number;
-  median: number;
 };
 
 export type SimulatedHouseholdPath = {
   id: string;
-  displacementYear: number;
+  displacementWeek: number;
   incomeValues: number[];
   purchasingPowerValues: number[];
+};
+
+export type WeeklyHouseholdOutcome = {
+  year: number;
+  employmentProbability: number;
+  displacementProbability: number;
+  employedIncome: number;
+  displacedIncome: number;
+  employedPurchasingPower: number;
+  displacedPurchasingPower: number;
 };
 
 const afterTaxIndex = (grossResources: number, reference: SimulationResult) => (
@@ -45,14 +56,15 @@ export const incomeOutcomes = (result: SimulationResult, reference: SimulationRe
   const displacedGross = year.capitalIncome + baseline.transfers + baseline.laborIncome * replacement + equalDividend;
   const employed = afterTaxIndex(employedGross, reference);
   const displaced = afterTaxIndex(displacedGross, reference);
-  const displacementProbability = year.automation;
+  const employmentProbability = calibration.currentLaborForceEmploymentRate.value * (1 - year.automation);
+  const displacementProbability = 1 - employmentProbability;
 
   return {
+    employmentProbability,
     displacementProbability,
     employed,
     displaced,
     average: afterTaxIncomeIndex(result, reference, yearIndex),
-    median: displacementProbability >= 0.5 ? displaced : employed,
   };
 };
 
@@ -60,12 +72,43 @@ export const purchasingPowerOutcomes = (result: SimulationResult, reference: Sim
   const income = incomeOutcomes(result, reference, yearIndex);
   const basketPrice = result.years[yearIndex].prices.householdBasket;
   return {
+    employmentProbability: income.employmentProbability,
     displacementProbability: income.displacementProbability,
     employed: income.employed / basketPrice,
     displaced: income.displaced / basketPrice,
     average: purchasingPowerIndex(result, reference, yearIndex),
-    median: income.median / basketPrice,
   };
+};
+
+const interpolate = (start: number, end: number, fraction: number) => start + (end - start) * fraction;
+
+export const weeklyHouseholdOutcomes = (
+  result: SimulationResult,
+  reference: SimulationResult,
+  weeksPerYear = 52,
+): WeeklyHouseholdOutcome[] => {
+  const totalWeeks = result.scenario.horizonYears * weeksPerYear;
+  return Array.from({ length: totalWeeks + 1 }, (_, week) => {
+    const year = week / weeksPerYear;
+    const lowerIndex = Math.min(Math.floor(year), result.years.length - 1);
+    const upperIndex = Math.min(lowerIndex + 1, result.years.length - 1);
+    const fraction = year - lowerIndex;
+    const lowerIncome = incomeOutcomes(result, reference, lowerIndex);
+    const upperIncome = incomeOutcomes(result, reference, upperIndex);
+    const lowerPurchasingPower = purchasingPowerOutcomes(result, reference, lowerIndex);
+    const upperPurchasingPower = purchasingPowerOutcomes(result, reference, upperIndex);
+    const employmentProbability = calibration.currentLaborForceEmploymentRate.value * (1 - week / totalWeeks);
+
+    return {
+      year,
+      employmentProbability,
+      displacementProbability: 1 - employmentProbability,
+      employedIncome: interpolate(lowerIncome.employed, upperIncome.employed, fraction),
+      displacedIncome: interpolate(lowerIncome.displaced, upperIncome.displaced, fraction),
+      employedPurchasingPower: interpolate(lowerPurchasingPower.employed, upperPurchasingPower.employed, fraction),
+      displacedPurchasingPower: interpolate(lowerPurchasingPower.displaced, upperPurchasingPower.displaced, fraction),
+    };
+  });
 };
 
 const seededRandom = (initialSeed: number) => {
@@ -86,23 +129,29 @@ export const simulateHouseholdPaths = (
   seed = 2026,
 ): SimulatedHouseholdPath[] => {
   const random = seededRandom(seed);
-  const income = result.years.map((_, index) => incomeOutcomes(result, reference, index));
-  const purchasingPower = result.years.map((_, index) => purchasingPowerOutcomes(result, reference, index));
+  const timeline = weeklyHouseholdOutcomes(result, reference);
+  const totalWeeks = timeline.length - 1;
 
   return Array.from({ length: count }, (_, index) => {
-    const draw = random();
-    const displacementIndex = income.findIndex((outcome) => outcome.displacementProbability >= draw);
-    const displacementYear = displacementIndex < 0 ? result.years.length : result.years[displacementIndex].year;
+    const initiallyEmployed = random() < calibration.currentLaborForceEmploymentRate.value;
+    let displacementWeek = initiallyEmployed ? totalWeeks : 0;
+    if (initiallyEmployed) {
+      for (let week = 0; week < totalWeeks; week += 1) {
+        const currentSurvival = 1 - week / totalWeeks;
+        const nextSurvival = 1 - (week + 1) / totalWeeks;
+        const weeklyRetentionProbability = currentSurvival === 0 ? 0 : nextSurvival / currentSurvival;
+        if (random() > weeklyRetentionProbability) {
+          displacementWeek = week + 1;
+          break;
+        }
+      }
+    }
 
     return {
       id: `worker${index}`,
-      displacementYear,
-      incomeValues: income.map((outcome, yearIndex) => (
-        result.years[yearIndex].year < displacementYear ? outcome.employed : outcome.displaced
-      )),
-      purchasingPowerValues: purchasingPower.map((outcome, yearIndex) => (
-        result.years[yearIndex].year < displacementYear ? outcome.employed : outcome.displaced
-      )),
+      displacementWeek,
+      incomeValues: timeline.map((outcome, week) => week < displacementWeek ? outcome.employedIncome : outcome.displacedIncome),
+      purchasingPowerValues: timeline.map((outcome, week) => week < displacementWeek ? outcome.employedPurchasingPower : outcome.displacedPurchasingPower),
     };
   });
 };
