@@ -2,6 +2,8 @@
 
 **Common Wealth** is an open-source simulator for one question: how might a household's material standard of living change during a transition to transformative AI?
 
+[View the live simulator](https://common-wealth-agi-simulator.bryan0.chatgpt.site/)
+
 The first milestone implements one named scenario, **20-Year Transformative AGI / No New Policy**, with a two-category consumption model and a deterministic TypeScript simulation.
 
 ## Local development
