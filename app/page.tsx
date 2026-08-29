@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { CartesianGrid, Label, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { calibration } from '../calibration/usBaseline';
 import { quintileById } from '../calibration/quintiles';
-import { afterTaxIncomeIndex, purchasingPowerIndex, purchasingPowerScale } from '../model/comparison';
+import { incomeOutcomes, purchasingPowerIndex, purchasingPowerScale, simulateIncomePaths } from '../model/comparison';
 import { simulate } from '../model/simulation';
 import { interventions } from '../scenarios/interventions';
 import { transformative20Year } from '../scenarios/transformative20yr';
@@ -14,6 +14,12 @@ import { Term, TermNotes } from '../ui/Terms';
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const compactMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
 const round = (value: number) => Math.round(value);
+
+function IncomeTooltip({ active, label, payload }: { active?: boolean; label?: number; payload?: Array<{ payload: Record<string, number> }> }) {
+  if (!active || !payload?.length) return null;
+  const datum = payload[0].payload;
+  return <div className="income-tooltip"><small>{label === 0 ? 'TODAY' : `YEAR ${label}`}</small><strong>{round(datum.medianIncome)}</strong><span>Median income index</span><b>{round(datum.displacedChance)}% chance displaced</b></div>;
+}
 
 export default function Home() {
   const [focusYear, setFocusYear] = useState(20);
@@ -27,10 +33,17 @@ export default function Home() {
     purchasingPower: purchasingPowerIndex(result, result, index),
   })), [result]);
 
-  const incomeChartData = useMemo(() => result.years.map((year, index) => ({
-    year: year.year,
-    income: afterTaxIncomeIndex(result, result, index),
-  })), [result]);
+  const simulatedIncomePaths = useMemo(() => simulateIncomePaths(result, result, 100, 8), [result]);
+  const incomeChartData = useMemo(() => result.years.map((year, index) => {
+    const outcome = incomeOutcomes(result, result, index);
+    return {
+      year: year.year,
+      medianIncome: outcome.median,
+      displacedChance: outcome.displacementProbability * 100,
+      ...Object.fromEntries(simulatedIncomePaths.map((path) => [path.id, path.values[index]])),
+    };
+  }), [result, simulatedIncomePaths]);
+  const displacedByYearTen = simulatedIncomePaths.filter((path) => path.displacementYear <= 10).length;
 
   const focused = result.years[focusYear];
   const selectedScale = purchasingPowerScale(result, result);
@@ -99,9 +112,10 @@ export default function Home() {
 
         <section className="result-card income-chart-card">
           <div className="result-head">
-            <div><p className="section-label">MIDDLE-INCOME HOUSEHOLD PATH</p><h2><Term note="incomeIndex">After-tax household income</Term></h2><p className="axis-definition">Q3 today = 100 · Before modeled price changes</p></div>
+            <div><p className="section-label">100 SIMULATED Q3 WORKERS</p><h2><Term note="incomeIndex">Likely after-tax household income</Term></h2><p className="axis-definition">Q3 today = 100 · Before modeled price changes</p></div>
+            <div className="displacement-callout"><strong>{displacedByYearTen}</strong><span>OF 100 PATHS<br />DISPLACED BY YEAR 10</span></div>
           </div>
-          <div className="chart-wrap income-chart" aria-label="Modeled after-tax household income for a Q3 middle-income U.S. household over 20 years">
+          <div className="chart-wrap income-chart" aria-label="One hundred simulated after-tax income paths for comparable Q3 workers over 20 years">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={incomeChartData} margin={{ top: 12, right: 16, bottom: 3, left: 54 }}>
                 <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
@@ -109,12 +123,15 @@ export default function Home() {
                 <YAxis domain={['auto','auto']} axisLine={false} tickLine={false} width={42}>
                   <Label value="After-tax income · Q3 today = 100" angle={-90} position="insideLeft" offset={-38} style={{ fontSize: 9, fill: '#6f746e', letterSpacing: 0.5 }} />
                 </YAxis>
-                <Tooltip formatter={(value, name) => [round(Number(value)), name]} labelFormatter={(v) => v === 0 ? 'Today' : `Year ${v}`} />
-                <Line type="monotone" dataKey="income" name="Q3 · Middle 20%" stroke={referencePreset.color} strokeWidth={4} dot={false} activeDot={{ r: 5 }} />
+                <Tooltip content={<IncomeTooltip />} />
+                {simulatedIncomePaths.map((path) => <Line key={path.id} type="stepAfter" dataKey={path.id} name="Simulated worker" stroke="#8b8065" strokeWidth={0.8} strokeOpacity={0.12} dot={false} activeDot={false} isAnimationActive={false} />)}
+                <Line type="stepAfter" dataKey="medianIncome" name="Median outcome" stroke={referencePreset.color} strokeWidth={4} dot={false} activeDot={{ r: 5 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <div className="quintile-legend single-legend"><span className="q3-key"><i style={{ background: referencePreset.color }} /> Q3 household</span></div>
+          <div className="quintile-legend single-legend income-legend"><span className="sample-key"><i /> Simulated workers</span><span className="q3-key"><i style={{ background: referencePreset.color }} /> Median outcome</span></div>
+          <div className="displacement-probabilities" aria-label="Cumulative chance of displacement"><span><small>TODAY</small><strong>0%</strong></span><span><small>YEAR 5</small><strong>25%</strong></span><span><small>YEAR 10</small><strong>50%</strong></span><span><small>YEAR 15</small><strong>75%</strong></span><span><small>YEAR 20</small><strong>100%</strong></span></div>
+          <p className="simulation-note">Each faint line is one simulated worker. The scenario displaces 5% of the original workers each year. Labor income drops to $0 at displacement; stock income and status-quo support keep total household income above $0.</p>
         </section>
       </section>
 

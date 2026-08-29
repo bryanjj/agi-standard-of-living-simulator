@@ -4,7 +4,7 @@ import type { Household } from './types';
 import { simulate } from './simulation';
 import { interventions } from '../scenarios/interventions';
 import { quintilePresets } from '../calibration/quintiles';
-import { afterTaxIncomeIndex, purchasingPowerIndex } from './comparison';
+import { afterTaxIncomeIndex, incomeOutcomes, purchasingPowerIndex, simulateIncomePaths } from './comparison';
 
 const household: Household = {
   annualIncome: 85_000,
@@ -90,6 +90,26 @@ describe('simulate', () => {
     expect(afterTaxIncomeIndex(result, result, 0)).toBe(100);
     expect(purchasingPowerIndex(result, result, 0)).toBe(100);
     expect(afterTaxIncomeIndex(result, result, 20)).not.toBeCloseTo(purchasingPowerIndex(result, result, 20), 5);
+  });
+
+  it('switches the median worker to the displaced outcome at the 50% threshold', () => {
+    const result = simulate(transformative20Year, quintilePresets[2].household);
+    const yearNine = incomeOutcomes(result, result, 9);
+    const yearTen = incomeOutcomes(result, result, 10);
+    expect(yearNine.displacementProbability).toBeCloseTo(0.45, 10);
+    expect(yearNine.median).toBe(yearNine.employed);
+    expect(yearTen.displacementProbability).toBeCloseTo(0.5, 10);
+    expect(yearTen.median).toBe(yearTen.displaced);
+    expect(yearTen.displaced).toBeLessThan(20);
+  });
+
+  it('creates stable Monte Carlo paths with one abrupt displacement year each', () => {
+    const result = simulate(transformative20Year, quintilePresets[2].household);
+    const first = simulateIncomePaths(result, result, 100, 2026);
+    const second = simulateIncomePaths(result, result, 100, 2026);
+    expect(first).toEqual(second);
+    expect(first).toHaveLength(100);
+    expect(first.every((path) => path.displacementYear >= 1 && path.displacementYear <= 20)).toBe(true);
   });
 
   it('makes interventions explicit and leaves status quo as the default', () => {

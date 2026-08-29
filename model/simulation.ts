@@ -5,7 +5,7 @@ import { interventions } from '../scenarios/interventions';
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-const effectiveTaxRate = (income: number) => {
+export const effectiveTaxRate = (income: number) => {
   if (income <= calibration.taxThresholdLow.value) return calibration.taxRateLow.value;
   if (income <= calibration.taxThresholdHigh.value) return calibration.taxRateMiddle.value;
   return calibration.taxRateHigh.value;

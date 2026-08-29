@@ -28,7 +28,7 @@ const notes = {
   incomeIndex: {
     marker: 5,
     name: 'Modeled household income',
-    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. The chart is an index with Q3 today set to 100.',
+    definition: 'After-tax labor income, capital income, and government support before the modeled price adjustment. Each faint line is a fixed Monte Carlo draw of a worker’s displacement year. Labor income becomes zero after displacement; total household income can remain above zero because of stock income and government support.',
     sources: [],
   },
   noAgi: {

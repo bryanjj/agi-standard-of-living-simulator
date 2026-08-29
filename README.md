@@ -18,7 +18,7 @@ Run the accounting tests with `npm test` and the production build with `npm run 
 - One source-backed Q3 middle-income reference household
 - Status quo policy path
 - Purchasing power and after-tax income normalized to Q3 today = 100
-- Single Q3 purchasing-power and after-tax-income paths
+- One Q3 purchasing-power path and 100 simulated worker-income paths
 - No-AGI comparison path
 - Exact contribution decomposition
 - Labor / capital / government resource composition

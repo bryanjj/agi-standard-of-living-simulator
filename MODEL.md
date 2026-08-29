@@ -86,9 +86,13 @@ The visible chart uses Q3 itself as the reference, so Q3 today equals 100. The c
 
 `comparisonPurchasingPower(h,t) = standardOfLiving(h,t) × afterTaxResources(h,0) / afterTaxResources(Q3,0)`
 
-The income chart uses the same reference point before the modeled price adjustment:
+The aggregate income index uses the same reference point before the modeled price adjustment:
 
 `afterTaxIncomeIndex(h,t) = 100 × afterTaxResources(h,t) / afterTaxResources(Q3,0)`
+
+That aggregate path is smooth because it averages displaced and employed workers. The visible income chart instead contains a fixed Monte Carlo sample of 100 comparable Q3 workers. For each worker, one displacement draw is mapped onto the scenario's cumulative automation path. A worker receives the modeled remaining-worker wage until displacement. At displacement, labor income becomes zero and the household retains modeled stock income, baseline transfers, and the status-quo 10% labor-loss replacement.
+
+The bold path is the median outcome. It follows the employed outcome while cumulative displacement is below 50%, then switches to the displaced outcome at year 10. The random seed is fixed so the visualization does not change on reload. The simulation adds no uncertainty beyond displacement timing.
 
 ## 7. Exact decomposition
 
