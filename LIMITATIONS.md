@@ -1,17 +1,11 @@
 # Limitations
 
-- **Not a forecast.** The named scenario is a stress test of one internally consistent path.
-- **Reduced form.** There is no capital accumulation, endogenous saving, investment demand, interest-rate clearing, migration, demographics, firm behavior, or aggregate-demand feedback.
-- **No occupation prediction.** Automation applies to the original aggregate task stock, not a user's job.
-- **Simplified current law.** Tax and benefit rules are transparent proxies, not a CBO or PolicyEngine microsimulation. Unemployment insurance uses national average replacement and duration values but omits state eligibility rules, benefit caps, waiting periods, and claim exhaustion across repeated spells. Social Security, Medicare, Medicaid, and state taxes are not modeled individually.
-- **Stock equity is still a proxy.** The household's direct and indirect stock equity determines its capital-income claim. It is more defensible than treating every financial asset as AI capital, but the model still does not distinguish AI-company exposure, individual companies, private business equity, leverage, dilution, saving, or asset drawdown.
-- **Two categories only.** The cited “irreproducible scarce factors” concept is represented at the household level with a simplified housing-exposure proxy; all other consumption is treated as reproducible. Sector-specific healthcare, food, energy, and construction assumptions are intentionally omitted.
-- **Fixed household.** Household size and housing status do not change over the simulation.
-- **Population sampling is coarse.** Workers randomly draw one of five equally likely household-income quintile profiles. Within each quintile, every worker receives the same Census 2024 mean income, SCF 2022 weighted-median stock equity, household-size proxy, and modal housing status. This represents broad population position, not the distribution within each quintile or a literal individual household.
-- **The poverty rate is SPM-aligned, not official.** It compares rolling 52-week modeled after-tax cash resources with 2025 BLS SPM thresholds adjusted for assumed family composition, housing tenure, and modeled prices. Two-person profiles assume two adults and three-person profiles assume two adults and one child. Geography, noncash benefits, medical expenses, childcare, work expenses, child support, payroll taxes, and detailed tax credits are omitted.
-- **Interventions are illustrative.** The safety net, citizen dividend, and public-fund options are simple distribution rules. They do not model administration, behavioral responses, financing, political feasibility, or general-equilibrium effects.
-- **No uncertainty bands yet.** The largest disagreements are exposed as assumptions, but the first milestone provides one named trajectory rather than distributions or sensitivity ranges.
-- **Material purchasing power is not welfare.** The index excludes leisure, involuntary unemployment costs, health, social status, public goods, environmental effects, and political power.
-- **Job transitions are reduced form.** Average compensated unemployment duration is used as a simple initial weekly reemployment calibration. It is not a direct estimate of job-finding probability, and the model does not distinguish occupations, job quality, hours, or wage changes after reemployment.
-- **Savings and debt are not modeled.** Purchasing power follows after-tax income and modeled prices. Unemployment insurance is included, but liquid savings, debt, severance, and household-specific consumption smoothing are omitted.
-- **Validation is preliminary.** Karger et al. is documented as a target; a matching rapid-AI scenario and formal comparison are future work.
+- **Published checkpoints first.** The current milestone reproduces scenario inputs and Table 3 outcomes. It does not yet solve the paper’s full monthly equation system.
+- **2030 boundary.** The implementation does not extrapolate beyond the paper’s supported horizon.
+- **No physical-task automation.** The paper exposes cognitive occupations directly to AI but does not model rapid advances in robotics.
+- **Two occupation groups.** Workers differ only between cognitive and all-other occupations in the source framework.
+- **No worker-level distribution.** The source model does not follow individual workers, earnings histories, households, savings, or poverty.
+- **Simplified capital.** Compute and other capital are combined, capital follows an exogenous supply schedule, and saving decisions are not explicit.
+- **No policy response.** Taxes, transfers, unemployment insurance, retraining programs, and new distribution mechanisms are outside the published scenarios.
+- **No aggregate-demand or financial disruption.** Business cycles, price rigidities, financial-market disruptions, political economy, and catastrophic risks are omitted.
+- **Independent implementation.** This project is not an official Anthropic replication package and is not endorsed by the authors.

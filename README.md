@@ -1,41 +1,33 @@
-# Common Wealth
+# Economic Scenarios for Transformative AI
 
-**Common Wealth** is an open-source simulator for one question: how might a household's material standard of living change during a transition to transformative AI?
+An independent open-source reconstruction of the economic framework in Anton Korinek, Charles I. Jones, Szymon Sacher, Tess Cotter, and Peter McCrory, “Economic Scenarios for Transformative AI,” Anthropic Institute Working Paper 2026-02.
 
-[View the live simulator](https://common-wealth-agi-simulator.bryan0.chatgpt.site/)
+[Open the live site](https://common-wealth-agi-simulator.bryan0.chatgpt.site/)
 
-The first milestone implements one named scenario, **Logistic Transformative AGI / No New Policy**, with a two-category consumption model and a deterministic TypeScript simulation.
+## Current milestone
 
-## Local development
+The interface reproduces the paper’s published modest, substantial, and extreme scenario inputs and 2030 headline outcomes. Numeric values are isolated in `model/anthropic.ts`, carry provenance metadata, and are checked against the paper’s tables.
+
+The next milestone is the independent TypeScript implementation of the paper’s monthly equation system. Published 2030 results will serve as regression targets.
+
+## Model boundary
+
+The project currently stops in 2030, matching the paper. The paper models direct AI effects on cognitive work but omits rapid robotics progress and physical-task automation. It also uses capital assumptions intended for the short and medium run. Any post-2030 extension will be implemented as a separate, visibly labeled layer with its additional assumptions documented.
+
+See [MODEL.md](MODEL.md), [SOURCES.md](SOURCES.md), and [LIMITATIONS.md](LIMITATIONS.md).
+
+## Development
 
 ```bash
 npm install
+npm test
 npm run dev
 ```
 
-Run the accounting tests with `npm test` and the production build with `npm run build`.
+## Status
 
-## What is included
-
-- A fixed random sample of 1,000 U.S. workers drawn across five equally sized household-income quintile profiles
-- Status quo policy path
-- A 30-year display horizon with employment at 50% in year 10 and approaching, but never reaching, zero
-- Purchasing power and after-tax income normalized so the sample mean today = 100
-- A modeled SPM-aligned poverty chart based on rolling 52-week resources and 2025 BLS housing-tenure thresholds
-- Probability-density charts for 1,000 matched weekly employment, income, and purchasing-power paths, shown through 250 weighted representative paths with a mean across all 1,000 samples
-- Weekly job loss and reemployment, with the chance of finding work declining asymptotically
-- Unemployment insurance replacing 42.2% of worker wages for 16 weeks after each job loss
-- Purchasing power derived from each worker's after-tax income and the modeled basket price, with no separate savings buffer
-- No-AGI comparison path
-- Exact contribution decomposition
-- Labor / capital / government resource composition
-- Reproducible goods versus irreproducible scarce factors
-- Secondary macroeconomic outputs
-- Provenance labels for every calibration value
-- Superscript definitions and citations for research, data, and simulator terms
-
-See [MODEL.md](MODEL.md), [SOURCES.md](SOURCES.md), and [LIMITATIONS.md](LIMITATIONS.md) before interpreting results.
+This is an independent implementation. It is not affiliated with or endorsed by Anthropic or the paper’s authors.
 
 ## License
 
-Intended for open-source release. Add the repository owner's preferred OSI-approved license before external distribution.
+An OSI-approved license has not yet been selected. Add the repository owner’s preferred license before describing the source as licensed for reuse.

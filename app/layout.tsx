@@ -14,18 +14,18 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://common-wealth-agi-simulator.bryan0.chatgpt.site'),
-  title: 'Common Wealth: AGI Standard of Living Simulator',
-  description: 'Explore how wages, capital ownership, government support, abundance, and scarce costs could shape your material standard of living in an AGI economy.',
+  title: 'Common Wealth: Economic Scenarios for Transformative AI',
+  description: 'An independent open-source reconstruction of the economic framework developed by Korinek, Jones, Sacher, Cotter, and McCrory.',
   openGraph: {
-    title: 'How would AGI change your standard of living?',
-    description: 'A household simulator for an AGI transition.',
+    title: 'Economic Scenarios for Transformative AI',
+    description: 'Explore how AI could reshape growth, wages, jobs, and the division of national income through 2030.',
     type: 'website',
-    images: [{ url: '/og.png', width: 1680, height: 945, alt: 'Common Wealth AGI household simulator' }],
+    images: [{ url: '/og.png', width: 1680, height: 945, alt: 'Common Wealth economic scenarios for transformative AI' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'How would AGI change your standard of living?',
-    description: 'A household simulator for an AGI transition.',
+    title: 'Economic Scenarios for Transformative AI',
+    description: 'Explore how AI could reshape growth, wages, jobs, and the division of national income through 2030.',
     images: ['/og.png'],
   },
 };
