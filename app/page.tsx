@@ -160,6 +160,8 @@ export default function Home() {
   const activeScenario = scenarioMode === 'custom' ? null : anthropicScenarioById[scenarioMode];
   const scenarioName = activeScenario?.name ?? 'Custom scenario';
   const scenarioColor = activeScenario?.color ?? '#b14e30';
+  const laborShareWidth = final.laborShare.toFixed(4);
+  const capitalShareWidth = final.capitalShare.toFixed(4);
 
   const choosePreset = (id: AnthropicScenarioId) => {
     setScenarioMode(id);
@@ -336,9 +338,9 @@ export default function Home() {
         </div>
         <article className="distribution-card wide">
           <div className="card-heading"><span>LABOR AND CAPITAL SHARES</span><strong>{scenarioName}</strong></div>
-          <div className="share-bar" aria-label={`${final.laborShare}% labor and ${final.capitalShare}% capital`}>
-            <span style={{ width: `${final.laborShare}%` }}><b>{pct(final.laborShare)}</b> Labor</span>
-            <span style={{ width: `${final.capitalShare}%` }}><b>{pct(final.capitalShare)}</b> Capital</span>
+          <div className="share-bar" aria-label={`${laborShareWidth}% labor and ${capitalShareWidth}% capital`}>
+            <span style={{ width: `${laborShareWidth}%` }}><b>{pct(final.laborShare)}</b> Labor</span>
+            <span style={{ width: `${capitalShareWidth}%` }}><b>{pct(final.capitalShare)}</b> Capital</span>
           </div>
           <div className="wage-list">
             <span><small>AVERAGE WAGE VS. NO-AI</small><strong>{signedPct(final.averageWageGap)}</strong></span>
