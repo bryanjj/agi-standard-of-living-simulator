@@ -20,6 +20,7 @@ import {
   type AnthropicScenarioId,
 } from '../model/anthropic';
 import {
+  INITIALLY_UNEXPOSED_WORK_SHARE,
   parametersFromScenario,
   scenarioParameterRanges,
   simulateScenarioPath,
@@ -40,8 +41,8 @@ type MetricSeries = {
 const metricSeries: Record<MetricId, MetricSeries[]> = {
   unemployment: [
     { key: 'totalUnemployment', label: 'All workers', color: '#c85b2f' },
-    { key: 'cognitiveUnemployment', label: 'Workers in AI-exposed occupations', color: '#793f31' },
-    { key: 'otherUnemployment', label: 'Workers outside direct AI exposure', color: '#397765' },
+    { key: 'cognitiveUnemployment', label: 'Initially AI-exposed occupations', color: '#793f31' },
+    { key: 'otherUnemployment', label: 'Initially unexposed occupations', color: '#397765' },
   ],
   gdp: [
     { key: 'gdpGap', label: 'GDP above no-AI path', color: '#397765' },
@@ -49,17 +50,18 @@ const metricSeries: Record<MetricId, MetricSeries[]> = {
   ],
   wages: [
     { key: 'averageWageGap', label: 'Average wage', color: '#1d211e' },
-    { key: 'cognitiveWageGap', label: 'AI-exposed occupation wage', color: '#c85b2f' },
-    { key: 'otherWageGap', label: 'Wage outside direct AI exposure', color: '#397765' },
+    { key: 'cognitiveWageGap', label: 'Initially AI-exposed occupation wage', color: '#c85b2f' },
+    { key: 'otherWageGap', label: 'Initially unexposed occupation wage', color: '#397765' },
   ],
   shares: [
     { key: 'laborShare', label: 'Labor share', color: '#397765' },
     { key: 'capitalShare', label: 'Capital share', color: '#c85b2f' },
   ],
   ai: [
-    { key: 'affectedTaskMass', label: 'Tasks AI can perform', color: '#793f31' },
-    { key: 'diffusion', label: 'Use of capable AI', color: '#c09532' },
-    { key: 'aiTaskShare', label: 'All tasks performed with AI', color: '#397765' },
+    { key: 'affectedTaskMass', label: 'Tasks technology can perform', color: '#793f31' },
+    { key: 'newlyExposedTaskMass', label: 'Initially unexposed tasks now within reach', color: '#c85b2f' },
+    { key: 'diffusion', label: 'Use of capable technology', color: '#c09532' },
+    { key: 'aiTaskShare', label: 'All tasks performed with AI or robots', color: '#397765' },
   ],
 };
 
@@ -83,10 +85,18 @@ const parameterControls: Array<{
     example: (value) => `At ${Math.round(value * 100)}%, AI can perform about ${Math.round(value * 10)} of every 10 tasks in the economy.`,
   },
   {
+    key: 'unexposedExposure2040',
+    label: 'How much of today’s unexposed work could AI or robots do by 2040?',
+    term: 'Expansion into initially unexposed work',
+    description: 'The share of work outside the initial AI-exposed group that technology can perform by 2040. The path begins smoothly after 2030.',
+    format: (value) => `${(value * 100).toFixed(0)}%`,
+    example: (value) => `At ${Math.round(value * 100)}%, technology adds about ${Math.round(value * INITIALLY_UNEXPOSED_WORK_SHARE * 100)}% of all economy-wide tasks to its reach by 2040.`,
+  },
+  {
     key: 'diffusion',
     label: 'How widely is capable AI used?',
     term: 'Diffusion share in 2030',
-    description: 'Of the tasks AI can do, this is the share of real task instances where a worker or company actually uses it.',
+    description: 'Of the tasks technology can do, this is the share of real task instances where a worker or company actually uses it.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
     example: (value) => `At ${Math.round(value * 100)}%, AI is used for about ${Math.round(value * 10)} of every 10 tasks it could perform.`,
   },
@@ -263,7 +273,7 @@ export default function Home() {
           <div className="parameter-editor" id="method">
             <div className="parameter-heading">
               <p className="section-label"><span>02</span> EDIT THE MODEL INPUTS</p>
-              <p>The 2026 anchors, 2030 checkpoints, and labor-market frictions feed the monthly equations.</p>
+              <p>The 2026 anchors, 2030 checkpoints, 2040 exposure extension, and labor-market frictions feed the monthly equations.</p>
             </div>
             <label className="terminal-control">
               <span>
@@ -324,7 +334,7 @@ export default function Home() {
             <small>Normal-times calibration: {pct(NORMAL_UNEMPLOYMENT_RATE)}</small>
           </article>
           <article><span>GDP VS. NO-AI PATH</span><strong>{signedPct(final.gdpGap)}</strong><small>{pct(final.gdpGrowth)} annual growth in {terminalYear}</small></article>
-          <article><span>AI-EXPOSED WORKER UNEMPLOYMENT</span><strong>{pct(final.cognitiveUnemployment)}</strong><small>{pct(final.otherUnemployment)} among workers outside direct AI exposure</small></article>
+          <article><span>INITIALLY AI-EXPOSED OCCUPATION UNEMPLOYMENT</span><strong>{pct(final.cognitiveUnemployment)}</strong><small>{pct(final.otherUnemployment)} among initially unexposed occupations</small></article>
           <article><span>LABOR SHARE OF INCOME</span><strong>{pct(final.laborShare)}</strong><small>Capital receives {pct(final.capitalShare)}</small></article>
         </section>
       </section>
@@ -344,7 +354,7 @@ export default function Home() {
             <div className="metric-tabs" aria-label="Chart outcome">
               {(['unemployment', 'gdp', 'wages', 'shares', 'ai'] as MetricId[]).map((item) => (
                 <button key={item} className={metric === item ? 'active' : ''} onClick={() => setMetric(item)}>
-                  {item === 'gdp' ? 'GDP' : item === 'ai' ? 'AI use' : item[0].toUpperCase() + item.slice(1)}
+                  {item === 'gdp' ? 'GDP' : item === 'ai' ? 'Exposure' : item[0].toUpperCase() + item.slice(1)}
                 </button>
               ))}
             </div>
@@ -420,8 +430,8 @@ export default function Home() {
           </div>
           <div className="wage-list">
             <span><small>AVERAGE WAGE VS. NO-AI</small><strong>{signedPct(final.averageWageGap)}</strong></span>
-            <span><small>AI-EXPOSED OCCUPATION WAGE VS. NO-AI</small><strong>{signedPct(final.cognitiveWageGap)}</strong></span>
-            <span><small>WAGE OUTSIDE DIRECT AI EXPOSURE VS. NO-AI</small><strong>{signedPct(final.otherWageGap)}</strong></span>
+            <span><small>INITIALLY AI-EXPOSED OCCUPATION WAGE VS. NO-AI</small><strong>{signedPct(final.cognitiveWageGap)}</strong></span>
+            <span><small>INITIALLY UNEXPOSED OCCUPATION WAGE VS. NO-AI</small><strong>{signedPct(final.otherWageGap)}</strong></span>
           </div>
         </article>
       </section>
@@ -430,8 +440,9 @@ export default function Home() {
         <div><p className="eyebrow">POST-2030 EXTENSION</p><h2>What continues after 2030.</h2></div>
         <div className="boundary-copy">
           <p>2030 remains the final published checkpoint. Extending the terminal year does not change any result through 2030. After that date, affected task mass and AI use continue along their existing logistic curves, while task productivity continues smoothly from its 2030 growth rate and gradually approaches a 30x ceiling.</p>
-          <p>The source model’s cognitive occupation group is labeled “AI-exposed occupations” here. The share of tasks exposed to AI grows over time, but the two worker groups remain fixed. Workers outside direct AI exposure can absorb displaced workers, and their own tasks are not directly automated.</p>
-          <p>The same production, capital, wage, matching, and job-flow equations continue each month. Rapid robotics, physical-task automation, policy responses, and new long-run capital behavior remain outside the model.</p>
+          <p>The two occupation groups remain fixed as worker cohorts so their outcomes can be followed over time. The 2040 exposure control allows AI or robotics to reach tasks in the group that begins outside direct AI exposure. At 50%, this adds about 19% of all economy-wide tasks to technology’s reach by 2040.</p>
+          <p>Newly exposed tasks use the same diffusion, productivity, automation, and new-human-task settings as the original AI-exposed tasks. This keeps the extension to one new input, but it is a simplifying assumption rather than a claim that software and robotics progress identically.</p>
+          <p>The production and capital equations continue each month. Both occupation groups can now carry an employment overhang or post vacancies as their relative labor demand changes, and workers can search between them. Policy responses and new long-run capital behavior remain outside the model.</p>
           <strong>Values after 2030 are a documented extension, not results reported by the original authors.</strong>
         </div>
       </section>

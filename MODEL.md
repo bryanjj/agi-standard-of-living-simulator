@@ -31,6 +31,7 @@ For the published presets, the implementation reproduces the paper’s Table 3 G
 The three presets can be used as starting points. Editing any control creates a custom scenario with these paths and frictions:
 
 - affected task mass in 2030;
+- share of initially unexposed work that becomes technologically feasible by 2040;
 - diffusion share in 2030;
 - task productivity gain in mid-2026 and 2030, displayed as a percentage and converted to log units internally;
 - automation share;
@@ -46,10 +47,20 @@ The 2030 result remains the paper checkpoint. Selecting a later terminal year do
 
 After 2030, affected task mass and diffusion continue along the same logistic curves calibrated to their 2026 anchors and 2030 scenario values. Automation share, reinstatement ratio, matching frictions, capital supply, and the other paper parameters remain unchanged.
 
+The exposure-expansion control is calibrated to 2040 independently of the selected terminal year. Let `r2040` be the selected fraction of the initially unexposed group that technology can perform by 2040. For `2030 < t`, its path is:
+
+`r(t) = 1 - exp[-k(t - 2030)²]`, where `k = -ln(1 - r2040) / 10²`
+
+This path has a zero level and zero slope in 2030, reaches the selected value in 2040, and continues smoothly toward full exposure afterward. A 100% setting uses a quintic smoothstep from zero in 2030 to one in 2040 so the endpoint remains finite and smooth. The economy-wide mass newly exposed at time `t` is the initially unexposed task share multiplied by `r(t)`.
+
+Newly exposed tasks inherit the existing diffusion, task-productivity, automation-share, and reinstatement settings. This is an explicit simplifying assumption. It keeps the extension to one new parameter rather than adding separate paths for robotics adoption, productivity, autonomy, and task creation.
+
 The paper's log productivity gain is linear through 2030. A permanently linear extrapolation would eventually become implausibly large and hit a hard cap. The extension instead uses a smooth saturation path. If the log productivity slope at 2030 is positive, productivity approaches an assumed 30x task-output ceiling while matching both the 2030 level and slope:
 
 `a(t) = ln(30) - [ln(30) - a(2030)] × exp{-g[t - 2030] / [ln(30) - a(2030)]}`
 
 For a negative 2030 slope, the same construction approaches zero while matching the 2030 level and slope. This avoids a level jump or growth-rate kink at the paper boundary.
 
-The source paper's “cognitive occupations” are labeled “AI-exposed occupations” in the interface. This is still a fixed source cohort, not a growing worker classification. What grows is the share of economy-wide tasks within AI capability. Workers outside direct AI exposure remain the destination for occupational reallocation, and their tasks are not directly automated. A changing worker classification or robotics path would require a separate model.
+The source model's two occupation groups remain fixed as worker cohorts. The interface labels them “initially AI-exposed occupations” and “initially unexposed occupations.” The new control changes the task exposure inside the second cohort rather than moving workers between the labels.
+
+The production block already allows the aggregate technology terms to sum over affected task types. The extension tracks the remaining labor-task mass separately for each cohort and assigns the full-employment target across groups in proportion to those remaining task masses. If the initially unexposed group moves above its next-month target, employment above the target becomes displacement layoffs after normal quits. If either group is below demand, it posts vacancies. The existing search matrix then lets unemployed workers seek jobs in either group. This preserves the published labor-market path when exposure expansion is zero while allowing either group to contract after 2030.

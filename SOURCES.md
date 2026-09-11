@@ -17,4 +17,4 @@ Every value exposed by `model/anthropic.ts` has a provenance label:
 - `ASSUMPTION`: introduced by this independent implementation.
 - `CALCULATED`: derived from other documented values.
 
-The implementation uses `PAPER` and `DATA` values through the 2030 checkpoint. Monthly chart values are labeled `CALCULATED`: they are outputs of the documented equation system. The selectable 2030 to 2050 horizon and the smooth 30x post-2030 productivity ceiling are labeled `ASSUMPTION`. Slider limits are interface safeguards and do not otherwise add new equations to the model.
+The implementation uses `PAPER` and `DATA` values through the 2030 checkpoint. Monthly chart values are labeled `CALCULATED`: they are outputs of the documented equation system. The selectable 2030 to 2050 horizon, smooth 30x post-2030 productivity ceiling, fixed 2040 exposure-expansion checkpoint, shared technology settings for newly exposed work, and target-based displacement rule are labeled `ASSUMPTION`. Slider limits are interface safeguards and do not otherwise add new equations to the model.

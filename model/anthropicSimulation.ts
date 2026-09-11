@@ -2,6 +2,7 @@ import type { AnthropicScenario, AnthropicScenarioId } from './anthropic';
 
 export type EditableScenarioParameters = {
   affectedTaskMass: number;
+  unexposedExposure2040: number;
   diffusion: number;
   productivityGain: number;
   automationShare: number;
@@ -19,6 +20,7 @@ export type ScenarioPathPoint = {
   date: number;
   label: string;
   affectedTaskMass: number;
+  newlyExposedTaskMass: number;
   diffusion: number;
   productivityGain: number;
   aiTaskShare: number;
@@ -36,6 +38,8 @@ export type ScenarioPathPoint = {
 
 type TechnologyPath = {
   m: number;
+  mC: number;
+  mN: number;
   d: number;
   a: number;
   psi: number;
@@ -49,6 +53,7 @@ type PotentialEconomy = {
   lnYL: number;
   xr: number;
   lnK: number;
+  laborTaskShares: [number, number];
 };
 
 type SteadyState = {
@@ -111,7 +116,14 @@ const EXTENSION_PRODUCTIVITY_MULTIPLIER_CEILING = {
 
 // DATA: 2025 CPS occupation-group calibration distributed with Anthropic's explorer.
 const GROUP_WEIGHTS = [0.6235251662150673, 0.3764748337849327];
+export const INITIALLY_UNEXPOSED_WORK_SHARE = GROUP_WEIGHTS[1];
 const NORMAL_UNEMPLOYMENT = 0.03840656852308217;
+
+// ASSUMPTION: Exposure expansion is calibrated at a fixed date so changing the display horizon never changes the path.
+export const EXPOSURE_EXTENSION_CHECKPOINT = {
+  year: 2040,
+  provenance: 'ASSUMPTION',
+} as const;
 
 // DATA: IPUMS-CPS 2010-2019 separation-rate relatives reported by the explorer.
 const SEPARATION_RELATIVES = [0.6890214806466161, 1.5150488573690546];
@@ -121,6 +133,7 @@ const fractionToRate = (fraction: number) => -Math.log(1 - clamp(fraction, 0, 0.
 
 export const parametersFromScenario = (scenario: AnthropicScenario): EditableScenarioParameters => ({
   affectedTaskMass: scenario.inputs.affectedTaskMass.value,
+  unexposedExposure2040: 0,
   diffusion: scenario.inputs.diffusion.value,
   productivityGain: scenario.inputs.productivityGain.value,
   automationShare: scenario.inputs.automationShare.value,
@@ -136,6 +149,7 @@ export const scenarioParameterRanges: Record<keyof EditableScenarioParameters, {
   step: number;
 }> = {
   affectedTaskMass: { min: 0.14, max: GROUP_WEIGHTS[0], step: 0.01 },
+  unexposedExposure2040: { min: 0, max: 1, step: 0.01 },
   diffusion: { min: 0.1, max: 1, step: 0.01 },
   productivityGain: { min: 0.1, max: 1.5, step: 0.01 },
   automationShare: { min: 0, max: 1, step: 0.01 },
@@ -179,12 +193,28 @@ const productivityAt = (time: number, parameters: EditableScenarioParameters) =>
   return parameters.productivityGain * Math.exp(gainSlope * yearsAfterCheckpoint / parameters.productivityGain);
 };
 
+const unexposedExposureAt = (time: number, target2040: number) => {
+  if (time <= FIXED.end || target2040 <= 0) return 0;
+  const yearsSince2030 = time - FIXED.end;
+  const checkpointSpan = EXPOSURE_EXTENSION_CHECKPOINT.year - FIXED.end;
+  if (target2040 >= 1) {
+    const progress = clamp(yearsSince2030 / checkpointSpan, 0, 1);
+    return progress * progress * progress * (progress * (progress * 6 - 15) + 10);
+  }
+  const rate = -Math.log(1 - target2040) / (checkpointSpan * checkpointSpan);
+  return 1 - Math.exp(-rate * yearsSince2030 * yearsSince2030);
+};
+
 const technologyAt = (time: number, parameters: EditableScenarioParameters): TechnologyPath => {
   const mSlope = logisticSlope(0.14, parameters.affectedTaskMass, GROUP_WEIGHTS[0]);
   const dSlope = logisticSlope(0.1, parameters.diffusion, 1);
+  const mC = logisticAt(time, 0.14, GROUP_WEIGHTS[0], mSlope);
+  const mN = GROUP_WEIGHTS[1] * unexposedExposureAt(time, parameters.unexposedExposure2040);
 
   return {
-    m: logisticAt(time, 0.14, GROUP_WEIGHTS[0], mSlope),
+    m: mC + mN,
+    mC,
+    mN,
     d: logisticAt(time, 0.1, 1, dSlope),
     a: productivityAt(time, parameters),
     psi: parameters.automationShare,
@@ -200,6 +230,13 @@ const closedForm = (
   const complementarity = 1 - FIXED.sigma;
   const aiMass = tech.m * tech.d;
   const costFactor = Math.exp(-complementarity * tech.a);
+  const laborTaskReduction = tech.d * (
+    1 - tech.rho * tech.psi - (1 - tech.psi) * costFactor
+  );
+  const laborTaskShares: [number, number] = [
+    GROUP_WEIGHTS[0] - tech.mC * laborTaskReduction,
+    GROUP_WEIGHTS[1] - tech.mN * laborTaskReduction,
+  ];
   const lnSL = Math.log(
     1 - tech.psi * aiMass * (costFactor - tech.rho)
       + Math.expm1(-complementarity * rentalGap) / FIXED.laborShare,
@@ -213,7 +250,7 @@ const closedForm = (
     (1 - FIXED.laborShare * Math.exp(lnSL)) / (1 - FIXED.laborShare),
   ) + lnYL - rentalGap;
 
-  return { lN, lnSL, lnW, lnYL, xr: rentalGap, lnK };
+  return { lN, lnSL, lnW, lnYL, xr: rentalGap, lnK, laborTaskShares };
 };
 
 const potentialEconomy = (tech: TechnologyPath, ideasGap: number): PotentialEconomy => {
@@ -233,9 +270,10 @@ const potentialEconomy = (tech: TechnologyPath, ideasGap: number): PotentialEcon
   return closedForm(tech, ideasGap, (low + high) / 2);
 };
 
-const targetsFromShift = (baseEmployment: number[], otherGroupShift: number) => {
-  const other = baseEmployment[1] * Math.exp(otherGroupShift);
-  return [baseEmployment[0] + baseEmployment[1] - other, other];
+const targetsFromTaskShares = (baseEmployment: number[], taskShares: [number, number]) => {
+  const totalEmployment = baseEmployment[0] + baseEmployment[1];
+  const totalTaskShare = taskShares[0] + taskShares[1];
+  return taskShares.map((share) => totalEmployment * share / totalTaskShare);
 };
 
 const weightedMean = (weights: number[], values: number[]) => (
@@ -339,14 +377,15 @@ const actualEconomy = (
   const complementarity = 1 - sigma;
   const sL = FIXED.laborShare;
   const sK = 1 - sL;
-  const lambdaC = Math.exp(-potential.lN) - (1 - cognitiveShare);
+  const [lambdaC, lambdaN] = potential.laborTaskShares;
+  const otherShare = 1 - cognitiveShare;
   const capitalBlock = (1 - sL * Math.exp(potential.lnSL)) * Math.exp(-complementarity * potential.xr);
   const cognitiveEmploymentRatio = employment[0] / baseEmployment[0];
   const otherEmploymentRatio = employment[1] / baseEmployment[1];
   const cognitivePrice = (Math.log(lambdaC / cognitiveShare) - Math.log(cognitiveEmploymentRatio)) / sigma;
-  const otherPrice = -Math.log(otherEmploymentRatio) / sigma;
+  const otherPrice = (Math.log(lambdaN / otherShare) - Math.log(otherEmploymentRatio)) / sigma;
   const priceBlock = sL * lambdaC * Math.exp(complementarity * (cognitivePrice - ideasGap))
-    + sL * (1 - cognitiveShare) * Math.exp(complementarity * (otherPrice - ideasGap));
+    + sL * lambdaN * Math.exp(complementarity * (otherPrice - ideasGap));
 
   const evaluate = (rentalGap: number) => {
     const laborShare = 1 - capitalBlock * Math.exp(complementarity * rentalGap);
@@ -397,14 +436,17 @@ const demandGivenCognitiveWage = (
   const complementarity = 1 - sigma;
   const sL = FIXED.laborShare;
   const sK = 1 - sL;
-  const lambdaC = Math.exp(-potential.lN) - (1 - cognitiveShare);
+  const [lambdaC, lambdaN] = potential.laborTaskShares;
+  const otherShare = 1 - cognitiveShare;
   const capitalBlock = (1 - sL * Math.exp(potential.lnSL)) * Math.exp(-complementarity * potential.xr);
-  const otherPrice = -Math.log(otherEmployment / baseEmployment[1]) / sigma;
+  const otherPrice = (
+    Math.log(lambdaN / otherShare) - Math.log(otherEmployment / baseEmployment[1])
+  ) / sigma;
   const cognitiveBlock = sL * lambdaC * Math.exp(complementarity * (cognitiveWage - ideasGap));
 
   const evaluate = (rentalGap: number) => {
     const laborShare = 1 - capitalBlock * Math.exp(complementarity * rentalGap);
-    const lnWN = ideasGap + Math.log((laborShare - cognitiveBlock) / (sL * (1 - cognitiveShare))) / complementarity;
+    const lnWN = ideasGap + Math.log((laborShare - cognitiveBlock) / (sL * lambdaN)) / complementarity;
     const outputComponent = sigma * (lnWN - otherPrice);
     const lnY = outputComponent + complementarity * ideasGap;
     const ellC = baseEmployment[0] * (lambdaC / cognitiveShare)
@@ -470,8 +512,7 @@ const runMonthlySystem = (
     const nextTech = technologyAt(time + FIXED.step, parameters);
     const potential = potentialEconomy(tech, ideasGap);
     const nextPotential = potentialEconomy(nextTech, ideasGap);
-    const target = targetsFromShift(ss.ell0, potential.lN);
-    const nextTarget = targetsFromShift(ss.ell0, nextPotential.lN);
+    const nextTarget = targetsFromTaskShares(ss.ell0, nextPotential.laborTaskShares);
     const quitRates = qBase.map((base, index) => (
       fractionToRate(base + qResponsive[index] * priorFinding[index] / ss.fBarO[index])
     ));
@@ -499,11 +540,16 @@ const runMonthlySystem = (
 
     const excessCognitive = Math.max(0, employment[0] - cognitiveDemand);
     const cognitiveShortfall = Math.max(0, cognitiveDemand - employment[0]);
-    const layoffs = [Math.max(0, excessCognitive - quitRates[0] * employment[0]), 0];
+    const otherOverhang = Math.max(0, Math.log(employment[1]) - Math.log(nextTarget[1]));
+    const otherShortfall = Math.max(0, Math.log(nextTarget[1]) - Math.log(employment[1]));
+    const layoffs = [
+      Math.max(0, excessCognitive - quitRates[0] * employment[0]),
+      Math.max(0, (otherOverhang - quitRates[1]) * employment[1]),
+    ];
     const vacancies = [
       (Math.max(0, quitRates[0] * employment[0] - excessCognitive)
         + parameters.postingSpeed * cognitiveShortfall) / ss.piBar[0],
-      (quitRates[1] + parameters.postingSpeed * Math.max(0, Math.log(nextTarget[1]) - Math.log(employment[1])))
+      (Math.max(0, quitRates[1] - otherOverhang) + parameters.postingSpeed * otherShortfall)
         * employment[1] / ss.piBar[1],
     ];
 
@@ -553,7 +599,6 @@ const runMonthlySystem = (
     unemployed = nextUnemployed;
     priorFinding = findingByOrigin;
     ideasGap += FIXED.step * growthGap(actual.lnY, ideasGap);
-    void target;
   }
 
   return { rows, ss };
@@ -576,6 +621,7 @@ export const simulateScenarioPath = (
 ): ScenarioPathPoint[] => {
   const safe: EditableScenarioParameters = {
     affectedTaskMass: clamp(parameters.affectedTaskMass, 0.14, GROUP_WEIGHTS[0]),
+    unexposedExposure2040: clamp(parameters.unexposedExposure2040, 0, 1),
     diffusion: clamp(parameters.diffusion, 0.1, 1),
     productivityGain: clamp(parameters.productivityGain, 0, 1.5),
     automationShare: clamp(parameters.automationShare, 0, 1),
@@ -602,6 +648,7 @@ export const simulateScenarioPath = (
         ? String(Math.round(row.t))
         : `${Math.floor(row.t)}-${String(Math.round((row.t % 1) * 12) + 1).padStart(2, '0')}`,
       affectedTaskMass: row.x.m * 100,
+      newlyExposedTaskMass: row.x.mN * 100,
       diffusion: row.x.d * 100,
       productivityGain: row.x.a,
       aiTaskShare: row.x.m * row.x.d * 100,

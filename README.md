@@ -6,7 +6,7 @@ An independent open-source reconstruction of the economic framework in Anton Kor
 
 ## Current milestone
 
-The interface solves the paper’s monthly equation system from 2024 through the January 2030 checkpoint. A terminal-year slider can continue the same system through 2050 without changing any result through 2030. Users can view unemployment, GDP, wages, factor-income shares, and AI adoption over time.
+The interface solves the paper’s monthly equation system from 2024 through the January 2030 checkpoint. A terminal-year slider can continue the system through 2050 without changing any result through 2030. A separate 2040 control can expand technological exposure into work that begins outside the source model’s directly exposed occupation group. Users can view unemployment, GDP, wages, factor-income shares, and technology adoption over time.
 
 The modest, substantial, and extreme scenarios remain available as published presets. Every scenario parameter can also be edited to create a custom path. The three published 2030 results are regression targets for the independent TypeScript implementation.
 
@@ -14,7 +14,7 @@ Numeric scenario values and provenance metadata live in `model/anthropic.ts`. Th
 
 ## Model boundary and extension
 
-The paper ends in 2030. Later years are a visibly labeled extension that continues its logistic AI-capability and diffusion curves and its monthly economic equations. Task productivity transitions smoothly from its 2030 slope toward an assumed 30x ceiling. The two occupation groups remain fixed, and the extension still omits rapid robotics progress and physical-task automation.
+The paper ends in 2030. Later years are a visibly labeled extension that continues its logistic AI-capability and diffusion curves and its monthly economic equations. Task productivity transitions smoothly from its 2030 slope toward an assumed 30x ceiling. The two occupation groups remain fixed as worker cohorts. An optional, smooth post-2030 path lets tasks in the initially unexposed cohort become feasible for AI or robotics, using the same adoption and productivity settings as other affected work.
 
 See [MODEL.md](MODEL.md), [SOURCES.md](SOURCES.md), and [LIMITATIONS.md](LIMITATIONS.md).
 

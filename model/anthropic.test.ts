@@ -6,7 +6,12 @@ import {
   MODEL_END_YEAR,
   MODEL_START_YEAR,
 } from './anthropic';
-import { parametersFromScenario, simulatePublishedScenario, simulateScenarioPath } from './anthropicSimulation';
+import {
+  INITIALLY_UNEXPOSED_WORK_SHARE,
+  parametersFromScenario,
+  simulatePublishedScenario,
+  simulateScenarioPath,
+} from './anthropicSimulation';
 
 describe('Anthropic scenario calibration', () => {
   it('is explicitly bounded to the paper horizon', () => {
@@ -69,6 +74,46 @@ describe('Anthropic scenario calibration', () => {
     expect(extendedPath).toHaveLength((2040 - 2026) * 12 + 1);
   });
 
+  it('keeps the robotics extension at zero through 2030', () => {
+    const base = parametersFromScenario(anthropicScenarioById.substantial);
+    const withoutExpansion = simulateScenarioPath(base, { terminalYear: 2031 });
+    const withExpansion = simulateScenarioPath(
+      { ...base, unexposedExposure2040: 0.75 },
+      { terminalYear: 2031 },
+    );
+    const checkpointLength = (2030 - 2026) * 12 + 1;
+
+    expect(withExpansion.slice(0, checkpointLength)).toEqual(withoutExpansion.slice(0, checkpointLength));
+    expect(withExpansion[checkpointLength - 1].newlyExposedTaskMass).toBe(0);
+    expect(withExpansion[checkpointLength].newlyExposedTaskMass).toBeGreaterThan(0);
+  });
+
+  it('calibrates exposure expansion to a fixed 2040 checkpoint', () => {
+    const parameters = {
+      ...parametersFromScenario(anthropicScenarioById.substantial),
+      unexposedExposure2040: 0.5,
+    };
+    const pathTo2040 = simulateScenarioPath(parameters, { terminalYear: 2040 });
+    const pathTo2050 = simulateScenarioPath(parameters, { terminalYear: 2050 });
+    const checkpoint = pathTo2040.at(-1)!;
+
+    expect(pathTo2050.slice(0, pathTo2040.length)).toEqual(pathTo2040);
+    expect(checkpoint.newlyExposedTaskMass).toBeCloseTo(INITIALLY_UNEXPOSED_WORK_SHARE * 50, 10);
+  });
+
+  it('expanding exposure raises technology use and lowers the labor share', () => {
+    const base = parametersFromScenario(anthropicScenarioById.substantial);
+    const noExpansion = simulateScenarioPath(base, { terminalYear: 2040 }).at(-1)!;
+    const expansion = simulateScenarioPath(
+      { ...base, unexposedExposure2040: 0.5 },
+      { terminalYear: 2040 },
+    ).at(-1)!;
+
+    expect(expansion.affectedTaskMass).toBeGreaterThan(noExpansion.affectedTaskMass);
+    expect(expansion.aiTaskShare).toBeGreaterThan(noExpansion.aiTaskShare);
+    expect(expansion.laborShare).toBeLessThan(noExpansion.laborShare);
+  });
+
   it('continues the technology paths smoothly through the 2030 checkpoint', () => {
     const path = simulateScenarioPath(
       parametersFromScenario(anthropicScenarioById.substantial),
@@ -101,6 +146,24 @@ describe('Anthropic scenario calibration', () => {
       expect(point.otherUnemployment).toBeGreaterThanOrEqual(0);
       expect(point.otherUnemployment).toBeLessThanOrEqual(100);
       expect(point.laborShare + point.capitalShare).toBeCloseTo(100, 10);
+    }
+  });
+
+  it('preserves bounds and accounting with full expansion into initially unexposed work', () => {
+    const path = simulateScenarioPath({
+      ...parametersFromScenario(anthropicScenarioById.extreme),
+      unexposedExposure2040: 1,
+    }, { terminalYear: 2050 });
+
+    for (const point of path) {
+      expect(point.totalUnemployment).toBeGreaterThanOrEqual(0);
+      expect(point.totalUnemployment).toBeLessThanOrEqual(100);
+      expect(point.cognitiveUnemployment).toBeGreaterThanOrEqual(0);
+      expect(point.cognitiveUnemployment).toBeLessThanOrEqual(100);
+      expect(point.otherUnemployment).toBeGreaterThanOrEqual(0);
+      expect(point.otherUnemployment).toBeLessThanOrEqual(100);
+      expect(point.laborShare + point.capitalShare).toBeCloseTo(100, 10);
+      expect(point.affectedTaskMass).toBeLessThanOrEqual(100 + 1e-9);
     }
   });
 });
