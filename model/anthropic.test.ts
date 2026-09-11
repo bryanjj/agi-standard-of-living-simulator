@@ -99,6 +99,28 @@ describe('Anthropic scenario calibration', () => {
 
     expect(pathTo2050.slice(0, pathTo2040.length)).toEqual(pathTo2040);
     expect(checkpoint.newlyExposedTaskMass).toBeCloseTo(INITIALLY_UNEXPOSED_WORK_SHARE * 50, 10);
+    expect(pathTo2050.at(-1)?.newlyExposedTaskMass).toBeCloseTo(checkpoint.newlyExposedTaskMass, 10);
+  });
+
+  it('uses one monotone exposure curve at every 2040 setting', () => {
+    const base = parametersFromScenario(anthropicScenarioById.substantial);
+    const almostFull = simulateScenarioPath(
+      { ...base, unexposedExposure2040: 0.99 },
+      { terminalYear: 2040 },
+    );
+    const full = simulateScenarioPath(
+      { ...base, unexposedExposure2040: 1 },
+      { terminalYear: 2040 },
+    );
+
+    for (let index = 1; index < full.length; index += 1) {
+      expect(full[index].newlyExposedTaskMass).toBeGreaterThanOrEqual(
+        almostFull[index].newlyExposedTaskMass - 1e-10,
+      );
+      expect(full[index].newlyExposedTaskMass).toBeGreaterThanOrEqual(
+        full[index - 1].newlyExposedTaskMass - 1e-10,
+      );
+    }
   });
 
   it('expanding exposure raises technology use and lowers the labor share', () => {

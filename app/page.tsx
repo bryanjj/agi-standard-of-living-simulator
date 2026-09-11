@@ -20,6 +20,7 @@ import {
   type AnthropicScenarioId,
 } from '../model/anthropic';
 import {
+  baselineAffectedTaskMassAt2040,
   INITIALLY_UNEXPOSED_WORK_SHARE,
   parametersFromScenario,
   scenarioParameterRanges,
@@ -77,22 +78,6 @@ const parameterControls: Array<{
   fromInputValue?: (value: number) => number;
 }> = [
   {
-    key: 'affectedTaskMass',
-    label: 'How much work can AI do?',
-    term: 'Affected task mass in 2030',
-    description: 'The share of all work tasks that AI is capable of performing by 2030, whether or not people and companies use it.',
-    format: (value) => `${(value * 100).toFixed(0)}%`,
-    example: (value) => `At ${Math.round(value * 100)}%, AI can perform about ${Math.round(value * 10)} of every 10 tasks in the economy.`,
-  },
-  {
-    key: 'unexposedExposure2040',
-    label: 'How much of today’s unexposed work could AI or robots do by 2040?',
-    term: 'Expansion into initially unexposed work',
-    description: 'The share of work outside the initial AI-exposed group that technology can perform by 2040. The path begins smoothly after 2030.',
-    format: (value) => `${(value * 100).toFixed(0)}%`,
-    example: (value) => `At ${Math.round(value * 100)}%, technology adds about ${Math.round(value * INITIALLY_UNEXPOSED_WORK_SHARE * 100)}% of all economy-wide tasks to its reach by 2040.`,
-  },
-  {
     key: 'diffusion',
     label: 'How widely is capable AI used?',
     term: 'Diffusion share in 2030',
@@ -148,11 +133,11 @@ const parameterControls: Array<{
   },
   {
     key: 'postingSpeed',
-    label: 'How quickly do expanding fields add openings?',
-    term: 'Monthly posting speed',
-    description: 'The share of an occupation group’s worker shortfall that employers post as new vacancies each month.',
+    label: 'How quickly does employment adjust?',
+    term: 'Monthly job adjustment speed',
+    description: 'The share of an occupation group’s gap from labor demand that is added or removed each month. Through 2030, this is the vacancy-posting speed.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
-    example: (value) => `At ${Math.round(value * 100)}%, employers post openings for ${Math.round(value * 100)} of every 100 missing workers each month.`,
+    example: (value) => `At ${Math.round(value * 100)}%, employment closes ${Math.round(value * 100)} of every 100 missing or excess jobs each month.`,
   },
 ];
 
@@ -214,6 +199,9 @@ export default function Home() {
     return ticks;
   }, [terminalYear]);
   const final = path[path.length - 1];
+  const baselineExposure2040 = baselineAffectedTaskMassAt2040(parameters);
+  const totalExposure2040 = baselineExposure2040
+    + INITIALLY_UNEXPOSED_WORK_SHARE * parameters.unexposedExposure2040;
   const activeScenario = scenarioMode === 'custom' ? null : anthropicScenarioById[scenarioMode];
   const scenarioName = activeScenario?.name ?? 'Custom scenario';
   const scenarioColor = activeScenario?.color ?? '#b14e30';
@@ -273,7 +261,7 @@ export default function Home() {
           <div className="parameter-editor" id="method">
             <div className="parameter-heading">
               <p className="section-label"><span>02</span> EDIT THE MODEL INPUTS</p>
-              <p>The 2026 anchors, 2030 checkpoints, 2040 exposure extension, and labor-market frictions feed the monthly equations.</p>
+              <p>The 2026 anchors, technology-capability checkpoints, adoption settings, and labor-market frictions feed the monthly equations.</p>
             </div>
             <label className="terminal-control">
               <span>
@@ -293,6 +281,49 @@ export default function Home() {
                 aria-label="Terminal year"
               />
             </label>
+            <section className="capability-control" aria-labelledby="capability-title">
+              <div className="capability-copy">
+                <span>TECHNOLOGY CAPABILITY PATH</span>
+                <h3 id="capability-title">How much of the economy’s work can technology do?</h3>
+                <p>Both sliders measure the same thing: the share of all tasks AI or robots could perform, whether or not the technology is used.</p>
+              </div>
+              <label>
+                <span><b>2030</b><em>Published scenario checkpoint</em></span>
+                <strong>{Math.round(parameters.affectedTaskMass * 100)}%</strong>
+                <input
+                  type="range"
+                  min={scenarioParameterRanges.affectedTaskMass.min}
+                  max={scenarioParameterRanges.affectedTaskMass.max}
+                  step={scenarioParameterRanges.affectedTaskMass.step}
+                  value={parameters.affectedTaskMass}
+                  onChange={(event) => editParameter('affectedTaskMass', Number(event.target.value))}
+                  style={{ accentColor: scenarioColor }}
+                  aria-label="Share of economy-wide tasks technology can perform in 2030"
+                />
+                <small>The original model’s 2030 capability setting.</small>
+              </label>
+              <label>
+                <span><b>2040</b><em>Extension checkpoint</em></span>
+                <strong>{Math.round(totalExposure2040 * 100)}%</strong>
+                <input
+                  type="range"
+                  min={baselineExposure2040}
+                  max={baselineExposure2040 + INITIALLY_UNEXPOSED_WORK_SHARE}
+                  step={0.01}
+                  value={totalExposure2040}
+                  onChange={(event) => {
+                    const total = Number(event.target.value);
+                    editParameter(
+                      'unexposedExposure2040',
+                      (total - baselineExposure2040) / INITIALLY_UNEXPOSED_WORK_SHARE,
+                    );
+                  }}
+                  style={{ accentColor: scenarioColor }}
+                  aria-label="Share of economy-wide tasks technology can perform in 2040"
+                />
+                <small>The minimum continues the original path. Raising it adds work reached by AI or robotics.</small>
+              </label>
+            </section>
             <div className="control-grid">
               {parameterControls.map((control) => {
                 const range = control.inputRange ?? scenarioParameterRanges[control.key];
@@ -440,9 +471,9 @@ export default function Home() {
         <div><p className="eyebrow">POST-2030 EXTENSION</p><h2>What continues after 2030.</h2></div>
         <div className="boundary-copy">
           <p>2030 remains the final published checkpoint. Extending the terminal year does not change any result through 2030. After that date, affected task mass and AI use continue along their existing logistic curves, while task productivity continues smoothly from its 2030 growth rate and gradually approaches a 30x ceiling.</p>
-          <p>The two occupation groups remain fixed as worker cohorts so their outcomes can be followed over time. The 2040 exposure control allows AI or robotics to reach tasks in the group that begins outside direct AI exposure. At 50%, this adds about 19% of all economy-wide tasks to technology’s reach by 2040.</p>
+          <p>The two occupation groups remain fixed as worker cohorts so their outcomes can be followed over time. The capability control shows one economy-wide measure at two checkpoints. The 2030 value comes from the original scenario. Raising the 2040 value allows AI or robotics to reach tasks in the group that begins outside direct AI exposure.</p>
           <p>Newly exposed tasks use the same diffusion, productivity, automation, and new-human-task settings as the original AI-exposed tasks. This keeps the extension to one new input, but it is a simplifying assumption rather than a claim that software and robotics progress identically.</p>
-          <p>The production and capital equations continue each month. Both occupation groups can now carry an employment overhang or post vacancies as their relative labor demand changes, and workers can search between them. Policy responses and new long-run capital behavior remain outside the model.</p>
+          <p>The production and capital equations continue each month. Both occupation groups can carry an employment overhang or post vacancies as their relative labor demand changes, and workers can search between them. Post-2030 employment adjusts toward changing labor demand at the selected monthly speed. Policy responses and new long-run capital behavior remain outside the model.</p>
           <strong>Values after 2030 are a documented extension, not results reported by the original authors.</strong>
         </div>
       </section>

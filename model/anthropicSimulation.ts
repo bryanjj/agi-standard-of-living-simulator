@@ -197,12 +197,9 @@ const unexposedExposureAt = (time: number, target2040: number) => {
   if (time <= FIXED.end || target2040 <= 0) return 0;
   const yearsSince2030 = time - FIXED.end;
   const checkpointSpan = EXPOSURE_EXTENSION_CHECKPOINT.year - FIXED.end;
-  if (target2040 >= 1) {
-    const progress = clamp(yearsSince2030 / checkpointSpan, 0, 1);
-    return progress * progress * progress * (progress * (progress * 6 - 15) + 10);
-  }
-  const rate = -Math.log(1 - target2040) / (checkpointSpan * checkpointSpan);
-  return 1 - Math.exp(-rate * yearsSince2030 * yearsSince2030);
+  const progress = clamp(yearsSince2030 / checkpointSpan, 0, 1);
+  const smoothProgress = progress * progress * progress * (progress * (progress * 6 - 15) + 10);
+  return target2040 * smoothProgress;
 };
 
 const technologyAt = (time: number, parameters: EditableScenarioParameters): TechnologyPath => {
@@ -221,6 +218,14 @@ const technologyAt = (time: number, parameters: EditableScenarioParameters): Tec
     rho: parameters.reinstatementRatio,
   };
 };
+
+// CALCULATED: The original affected-group path at the extension checkpoint, before added exposure.
+export const baselineAffectedTaskMassAt2040 = (parameters: EditableScenarioParameters) => (
+  technologyAt(EXPOSURE_EXTENSION_CHECKPOINT.year, {
+    ...parameters,
+    unexposedExposure2040: 0,
+  }).m
+);
 
 const closedForm = (
   tech: TechnologyPath,
@@ -542,14 +547,17 @@ const runMonthlySystem = (
     const cognitiveShortfall = Math.max(0, cognitiveDemand - employment[0]);
     const otherOverhang = Math.max(0, Math.log(employment[1]) - Math.log(nextTarget[1]));
     const otherShortfall = Math.max(0, Math.log(nextTarget[1]) - Math.log(employment[1]));
+    // ASSUMPTION: Post-2030 contraction closes at the same monthly adjustment speed as expansion.
+    // Scaling the target gap prevents an instantaneous jump to the new employment target.
+    const otherContraction = parameters.postingSpeed * otherOverhang;
     const layoffs = [
       Math.max(0, excessCognitive - quitRates[0] * employment[0]),
-      Math.max(0, (otherOverhang - quitRates[1]) * employment[1]),
+      Math.max(0, (otherContraction - quitRates[1]) * employment[1]),
     ];
     const vacancies = [
       (Math.max(0, quitRates[0] * employment[0] - excessCognitive)
         + parameters.postingSpeed * cognitiveShortfall) / ss.piBar[0],
-      (Math.max(0, quitRates[1] - otherOverhang) + parameters.postingSpeed * otherShortfall)
+      (Math.max(0, quitRates[1] - otherContraction) + parameters.postingSpeed * otherShortfall)
         * employment[1] / ss.piBar[1],
     ];
 

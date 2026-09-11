@@ -30,8 +30,7 @@ For the published presets, the implementation reproduces the paper’s Table 3 G
 
 The three presets can be used as starting points. Editing any control creates a custom scenario with these paths and frictions:
 
-- affected task mass in 2030;
-- share of initially unexposed work that becomes technologically feasible by 2040;
+- economy-wide task mass that technology can perform in 2030 and 2040, shown as two checkpoints on one capability path;
 - diffusion share in 2030;
 - task productivity gain in mid-2026 and 2030, displayed as a percentage and converted to log units internally;
 - automation share;
@@ -47,11 +46,13 @@ The 2030 result remains the paper checkpoint. Selecting a later terminal year do
 
 After 2030, affected task mass and diffusion continue along the same logistic curves calibrated to their 2026 anchors and 2030 scenario values. Automation share, reinstatement ratio, matching frictions, capital supply, and the other paper parameters remain unchanged.
 
-The exposure-expansion control is calibrated to 2040 independently of the selected terminal year. Let `r2040` be the selected fraction of the initially unexposed group that technology can perform by 2040. For `2030 < t`, its path is:
+The interface presents the 2030 and 2040 capability settings as the same economy-wide measure. Internally, the 2030 setting calibrates the original affected group. The minimum 2040 value continues that original path; moving the 2040 setting higher adds tasks from the initially unexposed group.
 
-`r(t) = 1 - exp[-k(t - 2030)²]`, where `k = -ln(1 - r2040) / 10²`
+Let `r2040` be the selected fraction of the initially unexposed group that technology can perform by 2040, and let `p = clamp((t - 2030) / 10, 0, 1)`. Its path is:
 
-This path has a zero level and zero slope in 2030, reaches the selected value in 2040, and continues smoothly toward full exposure afterward. A 100% setting uses a quintic smoothstep from zero in 2030 to one in 2040 so the endpoint remains finite and smooth. The economy-wide mass newly exposed at time `t` is the initially unexposed task share multiplied by `r(t)`.
+`r(t) = r2040 × p³(6p² - 15p + 10)`
+
+This single quintic smoothstep applies to every slider value, including 100%. It has zero slope at both checkpoints, reaches the selected value in 2040, and holds the added exposure constant afterward. The original affected-group path can still continue growing after 2040. The economy-wide mass newly exposed at time `t` is the initially unexposed task share multiplied by `r(t)`.
 
 Newly exposed tasks inherit the existing diffusion, task-productivity, automation-share, and reinstatement settings. This is an explicit simplifying assumption. It keeps the extension to one new parameter rather than adding separate paths for robotics adoption, productivity, autonomy, and task creation.
 
@@ -63,4 +64,4 @@ For a negative 2030 slope, the same construction approaches zero while matching 
 
 The source model's two occupation groups remain fixed as worker cohorts. The interface labels them “initially AI-exposed occupations” and “initially unexposed occupations.” The new control changes the task exposure inside the second cohort rather than moving workers between the labels.
 
-The production block already allows the aggregate technology terms to sum over affected task types. The extension tracks the remaining labor-task mass separately for each cohort and assigns the full-employment target across groups in proportion to those remaining task masses. If the initially unexposed group moves above its next-month target, employment above the target becomes displacement layoffs after normal quits. If either group is below demand, it posts vacancies. The existing search matrix then lets unemployed workers seek jobs in either group. This preserves the published labor-market path when exposure expansion is zero while allowing either group to contract after 2030.
+The production block already allows the aggregate technology terms to sum over affected task types. The extension tracks the remaining labor-task mass separately for each cohort and assigns the full-employment target across groups in proportion to those remaining task masses. If the initially unexposed group moves above its next-month target, a share of the employment overhang is removed at the selected monthly job-adjustment speed after normal quits. If either group is below demand, it posts vacancies at that speed. The existing search matrix then lets unemployed workers seek jobs in either group. This preserves the published labor-market path when exposure expansion is zero while preventing the extension from jumping immediately to a new employment target.
