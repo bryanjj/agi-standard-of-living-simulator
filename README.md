@@ -6,9 +6,11 @@ An independent open-source reconstruction of the economic framework in Anton Kor
 
 ## Current milestone
 
-The interface reproduces the paper’s published modest, substantial, and extreme scenario inputs and 2030 headline outcomes. Numeric values are isolated in `model/anthropic.ts`, carry provenance metadata, and are checked against the paper’s tables.
+The interface solves the paper’s monthly equation system from 2024 through the January 2030 checkpoint and displays all 49 monthly observations from January 2026 onward. Users can view unemployment, GDP, wages, and factor-income shares over time.
 
-The next milestone is the independent TypeScript implementation of the paper’s monthly equation system. Published 2030 results will serve as regression targets.
+The modest, substantial, and extreme scenarios remain available as published presets. Every scenario parameter can also be edited to create a custom path. The three published 2030 results are regression targets for the independent TypeScript implementation.
+
+Numeric scenario values and provenance metadata live in `model/anthropic.ts`. The monthly production, capital, wage, job-flow, matching, and ideas equations live in `model/anthropicSimulation.ts`.
 
 ## Model boundary
 

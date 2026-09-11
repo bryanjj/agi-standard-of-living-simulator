@@ -6,6 +6,7 @@ import {
   MODEL_END_YEAR,
   MODEL_START_YEAR,
 } from './anthropic';
+import { parametersFromScenario, simulatePublishedScenario, simulateScenarioPath } from './anthropicSimulation';
 
 describe('Anthropic scenario calibration', () => {
   it('is explicitly bounded to the paper horizon', () => {
@@ -30,5 +31,32 @@ describe('Anthropic scenario calibration', () => {
     expect(anthropicScenarioById.substantial.outcomes.totalUnemployment.value).toBe(4.6);
     expect(anthropicScenarioById.extreme.outcomes.totalUnemployment.value).toBe(11.9);
     expect(anthropicScenarioById.extreme.outcomes.cognitiveUnemployment.value).toBe(17.9);
+  });
+
+  it('produces monthly paths from 2026 through the 2030 checkpoint', () => {
+    const path = simulatePublishedScenario(anthropicScenarioById.substantial);
+    expect(path).toHaveLength(49);
+    expect(path[0].date).toBeCloseTo(2026, 10);
+    expect(path.at(-1)?.date).toBeCloseTo(2030, 10);
+    expect(path.every((point) => Number.isFinite(point.totalUnemployment))).toBe(true);
+  });
+
+  it.each(anthropicScenarios)('reproduces the published $name 2030 checkpoints', (scenario) => {
+    const final = simulatePublishedScenario(scenario).at(-1)!;
+    expect(final.gdpGap).toBeCloseTo(scenario.outcomes.gdpAboveNoAi.value, 0);
+    expect(final.gdpGrowth).toBeCloseTo(scenario.outcomes.gdpGrowth.value, 0);
+    expect(final.averageWageGap).toBeCloseTo(scenario.outcomes.averageWageAboveNoAi.value, 0);
+    expect(final.cognitiveWageGap).toBeCloseTo(scenario.outcomes.cognitiveWageAboveNoAi.value, 0);
+    expect(final.otherWageGap).toBeCloseTo(scenario.outcomes.otherWageAboveNoAi.value, 0);
+    expect(final.laborShare).toBeCloseTo(scenario.outcomes.laborShare.value, 0);
+    expect(final.totalUnemployment).toBeCloseTo(scenario.outcomes.totalUnemployment.value, 0);
+  });
+
+  it('responds continuously to a custom parameter edit', () => {
+    const base = parametersFromScenario(anthropicScenarioById.substantial);
+    const lowerAutomation = simulateScenarioPath({ ...base, automationShare: 0.5 }).at(-1)!;
+    const higherAutomation = simulateScenarioPath({ ...base, automationShare: 0.9 }).at(-1)!;
+    expect(higherAutomation.laborShare).toBeLessThan(lowerAutomation.laborShare);
+    expect(higherAutomation.totalUnemployment).toBeGreaterThan(lowerAutomation.totalUnemployment);
   });
 });
