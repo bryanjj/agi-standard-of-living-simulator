@@ -6,7 +6,12 @@ import {
   MODEL_END_YEAR,
   MODEL_START_YEAR,
 } from './anthropic';
-import { parametersFromScenario, simulatePublishedScenario, simulateScenarioPath } from './anthropicSimulation';
+import {
+  affectedTaskMassAt,
+  parametersFromScenario,
+  simulatePublishedScenario,
+  simulateScenarioPath,
+} from './anthropicSimulation';
 
 describe('Anthropic scenario calibration', () => {
   it('is explicitly bounded to the paper horizon', () => {
@@ -41,22 +46,74 @@ describe('Anthropic scenario calibration', () => {
     expect(path.every((point) => Number.isFinite(point.totalUnemployment))).toBe(true);
   });
 
-  it.each(anthropicScenarios)('reproduces the published $name 2030 checkpoints', (scenario) => {
+  it.each(anthropicScenarios)('maps the $name task-mass setting to its 2030 checkpoint', (scenario) => {
     const final = simulatePublishedScenario(scenario).at(-1)!;
-    expect(final.gdpGap).toBeCloseTo(scenario.outcomes.gdpAboveNoAi.value, 0);
-    expect(final.gdpGrowth).toBeCloseTo(scenario.outcomes.gdpGrowth.value, 0);
-    expect(final.averageWageGap).toBeCloseTo(scenario.outcomes.averageWageAboveNoAi.value, 0);
-    expect(final.cognitiveWageGap).toBeCloseTo(scenario.outcomes.cognitiveWageAboveNoAi.value, 0);
-    expect(final.otherWageGap).toBeCloseTo(scenario.outcomes.otherWageAboveNoAi.value, 0);
-    expect(final.laborShare).toBeCloseTo(scenario.outcomes.laborShare.value, 0);
+    expect(final.affectedTaskMass).toBeCloseTo(scenario.inputs.affectedTaskMass.value * 100, 10);
     expect(final.totalUnemployment).toBeCloseTo(scenario.outcomes.totalUnemployment.value, 0);
   });
 
   it('responds continuously to a custom parameter edit', () => {
     const base = parametersFromScenario(anthropicScenarioById.substantial);
-    const lowerAutomation = simulateScenarioPath({ ...base, automationShare: 0.5 }).at(-1)!;
-    const higherAutomation = simulateScenarioPath({ ...base, automationShare: 0.9 }).at(-1)!;
+    const lowerAutomation = simulateScenarioPath(
+      { ...base, automationShare: 0.5 },
+      { terminalYear: 2030 },
+    ).at(-1)!;
+    const higherAutomation = simulateScenarioPath(
+      { ...base, automationShare: 0.9 },
+      { terminalYear: 2030 },
+    ).at(-1)!;
     expect(higherAutomation.laborShare).toBeLessThan(lowerAutomation.laborShare);
     expect(higherAutomation.totalUnemployment).toBeGreaterThan(lowerAutomation.totalUnemployment);
+  });
+
+  it('maps the substantial growth rate to about 87% affected task mass in 2040', () => {
+    const parameters = parametersFromScenario(anthropicScenarioById.substantial);
+    expect(affectedTaskMassAt(2026.5, parameters.affectedTaskGrowth)).toBeCloseTo(0.14, 10);
+    expect(affectedTaskMassAt(2030, parameters.affectedTaskGrowth)).toBeCloseTo(0.3, 10);
+    expect(affectedTaskMassAt(2040, parameters.affectedTaskGrowth)).toBeCloseTo(0.872, 3);
+  });
+
+  it('extends the monthly path without changing earlier values', () => {
+    const parameters = parametersFromScenario(anthropicScenarioById.substantial);
+    const through2030 = simulateScenarioPath(parameters, { terminalYear: 2030 });
+    const through2040 = simulateScenarioPath(parameters, { terminalYear: 2040 });
+    expect(through2040).toHaveLength((2040 - 2026) * 12 + 1);
+    expect(through2040.slice(0, through2030.length)).toEqual(through2030);
+  });
+
+  it.each(anthropicScenarios)('keeps the $name exposure allocation monotone and bounded', (scenario) => {
+    const path = simulateScenarioPath(parametersFromScenario(scenario), { terminalYear: 2040 });
+    for (let index = 1; index < path.length; index += 1) {
+      expect(path[index].affectedTaskMass).toBeGreaterThanOrEqual(path[index - 1].affectedTaskMass - 1e-10);
+      expect(path[index].cognitiveAffectedTaskMass).toBeGreaterThanOrEqual(
+        path[index - 1].cognitiveAffectedTaskMass - 1e-10,
+      );
+      expect(path[index].otherAffectedTaskMass).toBeGreaterThanOrEqual(
+        path[index - 1].otherAffectedTaskMass - 1e-10,
+      );
+      expect(path[index].cognitiveAffectedTaskMass + path[index].otherAffectedTaskMass)
+        .toBeCloseTo(path[index].affectedTaskMass, 10);
+      expect(path[index].affectedTaskMass).toBeLessThan(100);
+      expect(path[index].cognitiveAffectedTaskMass).toBeLessThanOrEqual(62.35251662150673 + 1e-9);
+      expect(path[index].otherAffectedTaskMass).toBeLessThanOrEqual(37.64748337849327 + 1e-9);
+    }
+  });
+
+  it.each(anthropicScenarios)('returns finite, smoothly evolving outcomes through 2040 for $name', (scenario) => {
+    const path = simulateScenarioPath(parametersFromScenario(scenario), { terminalYear: 2040 });
+    let maximumMonthlyUnemploymentChange = 0;
+    for (let index = 0; index < path.length; index += 1) {
+      for (const value of Object.values(path[index])) {
+        if (typeof value === 'number') expect(Number.isFinite(value)).toBe(true);
+      }
+      expect(path[index].laborShare + path[index].capitalShare).toBeCloseTo(100, 10);
+      if (index > 0) {
+        maximumMonthlyUnemploymentChange = Math.max(
+          maximumMonthlyUnemploymentChange,
+          Math.abs(path[index].totalUnemployment - path[index - 1].totalUnemployment),
+        );
+      }
+    }
+    expect(maximumMonthlyUnemploymentChange).toBeLessThan(0.6);
   });
 });

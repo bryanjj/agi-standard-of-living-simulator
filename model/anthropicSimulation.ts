@@ -1,7 +1,7 @@
 import type { AnthropicScenario, AnthropicScenarioId } from './anthropic';
 
 export type EditableScenarioParameters = {
-  affectedTaskMass: number;
+  affectedTaskGrowth: number;
   diffusion: number;
   productivityGain: number;
   automationShare: number;
@@ -11,10 +11,16 @@ export type EditableScenarioParameters = {
   productivityAnchor2026: number;
 };
 
+export type ScenarioSimulationOptions = {
+  terminalYear?: number;
+};
+
 export type ScenarioPathPoint = {
   date: number;
   label: string;
   affectedTaskMass: number;
+  cognitiveAffectedTaskMass: number;
+  otherAffectedTaskMass: number;
   diffusion: number;
   productivityGain: number;
   aiTaskShare: number;
@@ -32,6 +38,8 @@ export type ScenarioPathPoint = {
 
 type TechnologyPath = {
   m: number;
+  mC: number;
+  mN: number;
   d: number;
   a: number;
   psi: number;
@@ -45,6 +53,7 @@ type PotentialEconomy = {
   lnYL: number;
   xr: number;
   lnK: number;
+  laborTaskShares: [number, number];
 };
 
 type SteadyState = {
@@ -94,14 +103,41 @@ const FIXED = {
 const GROUP_WEIGHTS = [0.6235251662150673, 0.3764748337849327];
 const NORMAL_UNEMPLOYMENT = 0.03840656852308217;
 
+// ASSUMPTION: The first long-run implementation can be displayed through 2040.
+export const TERMINAL_YEAR_RANGE = {
+  min: 2030,
+  max: 2040,
+  step: 1,
+  default: 2040,
+  provenance: 'ASSUMPTION',
+} as const;
+
+// ASSUMPTION: The productivity path approaches a finite task-output ceiling after 2030.
+const EXTENSION_PRODUCTIVITY_MULTIPLIER_CEILING = {
+  value: 30,
+  provenance: 'ASSUMPTION',
+} as const;
+
 // DATA: IPUMS-CPS 2010-2019 separation-rate relatives reported by the explorer.
 const SEPARATION_RELATIVES = [0.6890214806466161, 1.5150488573690546];
 
 const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
 const fractionToRate = (fraction: number) => -Math.log(1 - clamp(fraction, 0, 0.999999));
+const logit = (value: number) => Math.log(value / (1 - value));
+
+// CALCULATED: A 100%-ceiling logistic rate that passes through the paper's 2030 task-mass setting.
+export const affectedTaskGrowthFromMass = (mass2030: number) => (
+  (logit(clamp(mass2030, 0.140001, 0.999999)) - logit(0.14)) / (FIXED.end - FIXED.anchor)
+);
+
+export const affectedTaskMassAt = (time: number, annualGrowth: number) => {
+  const oddsAtAnchor = 0.14 / (1 - 0.14);
+  const odds = oddsAtAnchor * Math.exp(Math.max(0, annualGrowth) * (time - FIXED.anchor));
+  return odds / (1 + odds);
+};
 
 export const parametersFromScenario = (scenario: AnthropicScenario): EditableScenarioParameters => ({
-  affectedTaskMass: scenario.inputs.affectedTaskMass.value,
+  affectedTaskGrowth: affectedTaskGrowthFromMass(scenario.inputs.affectedTaskMass.value),
   diffusion: scenario.inputs.diffusion.value,
   productivityGain: scenario.inputs.productivityGain.value,
   automationShare: scenario.inputs.automationShare.value,
@@ -116,7 +152,7 @@ export const scenarioParameterRanges: Record<keyof EditableScenarioParameters, {
   max: number;
   step: number;
 }> = {
-  affectedTaskMass: { min: 0.14, max: GROUP_WEIGHTS[0], step: 0.01 },
+  affectedTaskGrowth: { min: 0, max: 0.65, step: 0.005 },
   diffusion: { min: 0.1, max: 1, step: 0.01 },
   productivityGain: { min: 0.1, max: 1.5, step: 0.01 },
   automationShare: { min: 0, max: 1, step: 0.01 },
@@ -141,15 +177,41 @@ const logisticAt = (time: number, anchor: number, ceiling: number, slope: number
   return ceiling / (1 + Math.exp(-slope * (time - midpoint)));
 };
 
+const productivityAt = (time: number, parameters: EditableScenarioParameters) => {
+  const slope = (parameters.productivityGain - parameters.productivityAnchor2026) / (FIXED.end - FIXED.anchor);
+  const linear = parameters.productivityAnchor2026 + slope * (time - FIXED.anchor);
+  const ceiling = Math.log(EXTENSION_PRODUCTIVITY_MULTIPLIER_CEILING.value);
+  if (time <= FIXED.end) return clamp(linear, 0, ceiling);
+  if (Math.abs(slope) < 1e-12) return clamp(parameters.productivityGain, 0, ceiling);
+
+  const yearsAfter2030 = time - FIXED.end;
+  if (slope > 0) {
+    const remaining = ceiling - parameters.productivityGain;
+    if (remaining <= 1e-12) return ceiling;
+    return ceiling - remaining * Math.exp(-slope * yearsAfter2030 / remaining);
+  }
+  if (parameters.productivityGain <= 1e-12) return 0;
+  return parameters.productivityGain * Math.exp(slope * yearsAfter2030 / parameters.productivityGain);
+};
+
 const technologyAt = (time: number, parameters: EditableScenarioParameters): TechnologyPath => {
-  const mSlope = logisticSlope(0.14, parameters.affectedTaskMass, GROUP_WEIGHTS[0]);
   const dSlope = logisticSlope(0.1, parameters.diffusion, 1);
-  const gainSlope = (parameters.productivityGain - parameters.productivityAnchor2026) / (FIXED.end - FIXED.anchor);
+  const m = affectedTaskMassAt(time, parameters.affectedTaskGrowth);
+  const m2030 = affectedTaskMassAt(FIXED.end, parameters.affectedTaskGrowth);
+  const remainingMass2030 = 1 - m2030;
+  const allocationProgress = clamp((m - m2030) / remainingMass2030, 0, 1);
+  const requiredOtherShare = GROUP_WEIGHTS[1] / remainingMass2030;
+  const allocationShape = requiredOtherShare / (1 - requiredOtherShare);
+  const integratedOtherAllocation = allocationProgress
+    - (1 - Math.pow(1 - allocationProgress, allocationShape + 1)) / (allocationShape + 1);
+  const mN = remainingMass2030 * integratedOtherAllocation;
 
   return {
-    m: logisticAt(time, 0.14, GROUP_WEIGHTS[0], mSlope),
+    m,
+    mC: m - mN,
+    mN,
     d: logisticAt(time, 0.1, 1, dSlope),
-    a: clamp(parameters.productivityAnchor2026 + gainSlope * (time - FIXED.anchor), 0, Math.log(30)),
+    a: productivityAt(time, parameters),
     psi: parameters.automationShare,
     rho: parameters.reinstatementRatio,
   };
@@ -163,6 +225,13 @@ const closedForm = (
   const complementarity = 1 - FIXED.sigma;
   const aiMass = tech.m * tech.d;
   const costFactor = Math.exp(-complementarity * tech.a);
+  const laborTaskReduction = tech.d * (
+    1 - tech.rho * tech.psi - (1 - tech.psi) * costFactor
+  );
+  const laborTaskShares: [number, number] = [
+    GROUP_WEIGHTS[0] - tech.mC * laborTaskReduction,
+    GROUP_WEIGHTS[1] - tech.mN * laborTaskReduction,
+  ];
   const lnSL = Math.log(
     1 - tech.psi * aiMass * (costFactor - tech.rho)
       + Math.expm1(-complementarity * rentalGap) / FIXED.laborShare,
@@ -176,7 +245,7 @@ const closedForm = (
     (1 - FIXED.laborShare * Math.exp(lnSL)) / (1 - FIXED.laborShare),
   ) + lnYL - rentalGap;
 
-  return { lN, lnSL, lnW, lnYL, xr: rentalGap, lnK };
+  return { lN, lnSL, lnW, lnYL, xr: rentalGap, lnK, laborTaskShares };
 };
 
 const potentialEconomy = (tech: TechnologyPath, ideasGap: number): PotentialEconomy => {
@@ -196,9 +265,10 @@ const potentialEconomy = (tech: TechnologyPath, ideasGap: number): PotentialEcon
   return closedForm(tech, ideasGap, (low + high) / 2);
 };
 
-const targetsFromShift = (baseEmployment: number[], otherGroupShift: number) => {
-  const other = baseEmployment[1] * Math.exp(otherGroupShift);
-  return [baseEmployment[0] + baseEmployment[1] - other, other];
+const targetsFromTaskShares = (baseEmployment: number[], taskShares: [number, number]) => {
+  const totalEmployment = baseEmployment[0] + baseEmployment[1];
+  const totalTaskShare = taskShares[0] + taskShares[1];
+  return taskShares.map((share) => totalEmployment * share / totalTaskShare);
 };
 
 const weightedMean = (weights: number[], values: number[]) => (
@@ -206,11 +276,9 @@ const weightedMean = (weights: number[], values: number[]) => (
 );
 
 const hires = (efficiency: number, search: number, vacancies: number) => {
-  const smaller = Math.min(search, vacancies);
-  const larger = Math.max(search, vacancies);
-  if (smaller <= 0) return 0;
-  return efficiency * smaller / Math.pow(
-    1 + Math.pow(smaller / larger, FIXED.matchingCurvature),
+  if (search <= 0 || vacancies <= 0) return 0;
+  return efficiency / Math.pow(
+    Math.pow(search, -FIXED.matchingCurvature) + Math.pow(vacancies, -FIXED.matchingCurvature),
     1 / FIXED.matchingCurvature,
   );
 };
@@ -302,14 +370,15 @@ const actualEconomy = (
   const complementarity = 1 - sigma;
   const sL = FIXED.laborShare;
   const sK = 1 - sL;
-  const lambdaC = Math.exp(-potential.lN) - (1 - cognitiveShare);
+  const [lambdaC, lambdaN] = potential.laborTaskShares;
+  const otherShare = 1 - cognitiveShare;
   const capitalBlock = (1 - sL * Math.exp(potential.lnSL)) * Math.exp(-complementarity * potential.xr);
   const cognitiveEmploymentRatio = employment[0] / baseEmployment[0];
   const otherEmploymentRatio = employment[1] / baseEmployment[1];
   const cognitivePrice = (Math.log(lambdaC / cognitiveShare) - Math.log(cognitiveEmploymentRatio)) / sigma;
-  const otherPrice = -Math.log(otherEmploymentRatio) / sigma;
+  const otherPrice = (Math.log(lambdaN / otherShare) - Math.log(otherEmploymentRatio)) / sigma;
   const priceBlock = sL * lambdaC * Math.exp(complementarity * (cognitivePrice - ideasGap))
-    + sL * (1 - cognitiveShare) * Math.exp(complementarity * (otherPrice - ideasGap));
+    + sL * lambdaN * Math.exp(complementarity * (otherPrice - ideasGap));
 
   const evaluate = (rentalGap: number) => {
     const laborShare = 1 - capitalBlock * Math.exp(complementarity * rentalGap);
@@ -360,14 +429,17 @@ const demandGivenCognitiveWage = (
   const complementarity = 1 - sigma;
   const sL = FIXED.laborShare;
   const sK = 1 - sL;
-  const lambdaC = Math.exp(-potential.lN) - (1 - cognitiveShare);
+  const [lambdaC, lambdaN] = potential.laborTaskShares;
+  const otherShare = 1 - cognitiveShare;
   const capitalBlock = (1 - sL * Math.exp(potential.lnSL)) * Math.exp(-complementarity * potential.xr);
-  const otherPrice = -Math.log(otherEmployment / baseEmployment[1]) / sigma;
+  const otherPrice = (
+    Math.log(lambdaN / otherShare) - Math.log(otherEmployment / baseEmployment[1])
+  ) / sigma;
   const cognitiveBlock = sL * lambdaC * Math.exp(complementarity * (cognitiveWage - ideasGap));
 
   const evaluate = (rentalGap: number) => {
     const laborShare = 1 - capitalBlock * Math.exp(complementarity * rentalGap);
-    const lnWN = ideasGap + Math.log((laborShare - cognitiveBlock) / (sL * (1 - cognitiveShare))) / complementarity;
+    const lnWN = ideasGap + Math.log((laborShare - cognitiveBlock) / (sL * lambdaN)) / complementarity;
     const outputComponent = sigma * (lnWN - otherPrice);
     const lnY = outputComponent + complementarity * ideasGap;
     const ellC = baseEmployment[0] * (lambdaC / cognitiveShare)
@@ -404,7 +476,16 @@ const growthGap = (gdpGap: number, ideasGap: number) => {
   );
 };
 
-const runMonthlySystem = (parameters: EditableScenarioParameters): { rows: SimulationRow[]; ss: SteadyState } => {
+// ASSUMPTION: A smooth positive-part operator avoids hard labor-flow thresholds.
+const smoothPositive = (value: number, width = 0.0001) => {
+  const scaled = value / width;
+  return width * (Math.max(scaled, 0) + Math.log1p(Math.exp(-Math.abs(scaled))));
+};
+
+const runMonthlySystem = (
+  parameters: EditableScenarioParameters,
+  terminalYear: number,
+): { rows: SimulationRow[]; ss: SteadyState } => {
   const ss = steadyState();
   const qBase = SEPARATION_RELATIVES.map((relative) => (
     (1 - FIXED.responsiveQuitShare) * FIXED.normalQuitRateAnnual / 12 * relative
@@ -422,7 +503,7 @@ const runMonthlySystem = (parameters: EditableScenarioParameters): { rows: Simul
   let stickyWageGap = 0;
   let ideasGap = 0;
   const rows: SimulationRow[] = [];
-  const months = Math.round((FIXED.end - FIXED.start) / FIXED.step);
+  const months = Math.round((terminalYear - FIXED.start) / FIXED.step);
 
   for (let month = 0; month <= months; month += 1) {
     const time = FIXED.start + month * FIXED.step;
@@ -430,13 +511,12 @@ const runMonthlySystem = (parameters: EditableScenarioParameters): { rows: Simul
     const nextTech = technologyAt(time + FIXED.step, parameters);
     const potential = potentialEconomy(tech, ideasGap);
     const nextPotential = potentialEconomy(nextTech, ideasGap);
-    const target = targetsFromShift(ss.ell0, potential.lN);
-    const nextTarget = targetsFromShift(ss.ell0, nextPotential.lN);
+    const nextTarget = targetsFromTaskShares(ss.ell0, nextPotential.laborTaskShares);
     const quitRates = qBase.map((base, index) => (
       fractionToRate(base + qResponsive[index] * priorFinding[index] / ss.fBarO[index])
     ));
 
-    const attachedCognitive = employment[0] + Math.max(0, unemployed[0] - ss.UBar[0]);
+    const attachedCognitive = employment[0] + smoothPositive(unemployed[0] - ss.UBar[0]);
     const clearing = actualEconomy(
       potential,
       ideasGap,
@@ -457,13 +537,20 @@ const runMonthlySystem = (parameters: EditableScenarioParameters): { rows: Simul
     );
     if (!Number.isFinite(cognitiveDemand) || cognitiveDemand < 0) cognitiveDemand = employment[0];
 
-    const excessCognitive = Math.max(0, employment[0] - cognitiveDemand);
-    const cognitiveShortfall = Math.max(0, cognitiveDemand - employment[0]);
-    const layoffs = [Math.max(0, excessCognitive - quitRates[0] * employment[0]), 0];
+    const excessCognitive = smoothPositive(employment[0] - cognitiveDemand);
+    const cognitiveShortfall = smoothPositive(cognitiveDemand - employment[0]);
+    const otherOverhang = smoothPositive(Math.log(employment[1]) - Math.log(nextTarget[1]));
+    const otherShortfall = smoothPositive(Math.log(nextTarget[1]) - Math.log(employment[1]));
+    const cognitiveContraction = parameters.postingSpeed * excessCognitive;
+    const otherContraction = parameters.postingSpeed * otherOverhang;
+    const layoffs = [
+      smoothPositive(cognitiveContraction - quitRates[0] * employment[0]),
+      smoothPositive(otherContraction - quitRates[1]) * employment[1],
+    ];
     const vacancies = [
-      (Math.max(0, quitRates[0] * employment[0] - excessCognitive)
+      (smoothPositive(quitRates[0] * employment[0] - cognitiveContraction)
         + parameters.postingSpeed * cognitiveShortfall) / ss.piBar[0],
-      (quitRates[1] + parameters.postingSpeed * Math.max(0, Math.log(nextTarget[1]) - Math.log(employment[1])))
+      (smoothPositive(quitRates[1] - otherContraction) + parameters.postingSpeed * otherShortfall)
         * employment[1] / ss.piBar[1],
     ];
 
@@ -513,7 +600,6 @@ const runMonthlySystem = (parameters: EditableScenarioParameters): { rows: Simul
     unemployed = nextUnemployed;
     priorFinding = findingByOrigin;
     ideasGap += FIXED.step * growthGap(actual.lnY, ideasGap);
-    void target;
   }
 
   return { rows, ss };
@@ -530,9 +616,12 @@ const interpolateRow = (rows: SimulationRow[], time: number, pick: (row: Simulat
 
 const percentGap = (logGap: number) => 100 * Math.expm1(logGap);
 
-export const simulateScenarioPath = (parameters: EditableScenarioParameters): ScenarioPathPoint[] => {
+export const simulateScenarioPath = (
+  parameters: EditableScenarioParameters,
+  options: ScenarioSimulationOptions = {},
+): ScenarioPathPoint[] => {
   const safe: EditableScenarioParameters = {
-    affectedTaskMass: clamp(parameters.affectedTaskMass, 0.14, GROUP_WEIGHTS[0]),
+    affectedTaskGrowth: clamp(parameters.affectedTaskGrowth, 0, 0.65),
     diffusion: clamp(parameters.diffusion, 0.1, 1),
     productivityGain: clamp(parameters.productivityGain, 0, 1.5),
     automationShare: clamp(parameters.automationShare, 0, 1),
@@ -541,9 +630,14 @@ export const simulateScenarioPath = (parameters: EditableScenarioParameters): Sc
     postingSpeed: clamp(parameters.postingSpeed, 0.01, 1),
     productivityAnchor2026: clamp(parameters.productivityAnchor2026, 0, 1.5),
   };
-  const { rows } = runMonthlySystem(safe);
+  const terminalYear = clamp(
+    Math.round(options.terminalYear ?? TERMINAL_YEAR_RANGE.default),
+    TERMINAL_YEAR_RANGE.min,
+    TERMINAL_YEAR_RANGE.max,
+  );
+  const { rows } = runMonthlySystem(safe, terminalYear);
 
-  return rows.filter((row) => row.t >= 2026 - 1e-9 && row.t <= 2030 + 1e-9).map((row) => {
+  return rows.filter((row) => row.t >= 2026 - 1e-9 && row.t <= terminalYear + 1e-9).map((row) => {
     const priorYear = row.t - 1;
     const annualGapChange = row.t >= 2025
       ? row.lnYAct - interpolateRow(rows, priorYear, (item) => item.lnYAct)
@@ -554,6 +648,8 @@ export const simulateScenarioPath = (parameters: EditableScenarioParameters): Sc
         ? String(Math.round(row.t))
         : `${Math.floor(row.t)}-${String(Math.round((row.t % 1) * 12) + 1).padStart(2, '0')}`,
       affectedTaskMass: row.x.m * 100,
+      cognitiveAffectedTaskMass: row.x.mC * 100,
+      otherAffectedTaskMass: row.x.mN * 100,
       diffusion: row.x.d * 100,
       productivityGain: row.x.a,
       aiTaskShare: row.x.m * row.x.d * 100,
@@ -572,7 +668,7 @@ export const simulateScenarioPath = (parameters: EditableScenarioParameters): Sc
 };
 
 export const simulatePublishedScenario = (scenario: AnthropicScenario) => (
-  simulateScenarioPath(parametersFromScenario(scenario))
+  simulateScenarioPath(parametersFromScenario(scenario), { terminalYear: FIXED.end })
 );
 
 export const publishedScenarioParameters = (scenarios: AnthropicScenario[]) => {

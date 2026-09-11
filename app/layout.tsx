@@ -18,14 +18,14 @@ export const metadata: Metadata = {
   description: 'An independent open-source reconstruction of the economic framework developed by Korinek, Jones, Sacher, Cotter, and McCrory.',
   openGraph: {
     title: 'Economic Scenarios for Transformative AI',
-    description: 'Explore how AI could reshape growth, wages, jobs, and the division of national income through 2030.',
+    description: 'Explore how expanding AI and robotics capability could reshape growth, wages, jobs, and national income through 2040.',
     type: 'website',
     images: [{ url: '/og.png', width: 1680, height: 945, alt: 'Common Wealth economic scenarios for transformative AI' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Economic Scenarios for Transformative AI',
-    description: 'Explore how AI could reshape growth, wages, jobs, and the division of national income through 2030.',
+    description: 'Explore how expanding AI and robotics capability could reshape growth, wages, jobs, and national income through 2040.',
     images: ['/og.png'],
   },
 };

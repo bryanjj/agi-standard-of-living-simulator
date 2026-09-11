@@ -20,15 +20,17 @@ import {
   type AnthropicScenarioId,
 } from '../model/anthropic';
 import {
+  affectedTaskMassAt,
   parametersFromScenario,
   scenarioParameterRanges,
   simulateScenarioPath,
+  TERMINAL_YEAR_RANGE,
   type EditableScenarioParameters,
   type ScenarioPathPoint,
 } from '../model/anthropicSimulation';
 
 type ScenarioMode = AnthropicScenarioId | 'custom';
-type MetricId = 'unemployment' | 'gdp' | 'wages' | 'shares';
+type MetricId = 'unemployment' | 'gdp' | 'wages' | 'shares' | 'exposure';
 
 type MetricSeries = {
   key: keyof ScenarioPathPoint;
@@ -55,6 +57,12 @@ const metricSeries: Record<MetricId, MetricSeries[]> = {
     { key: 'laborShare', label: 'Labor share', color: '#397765' },
     { key: 'capitalShare', label: 'Capital share', color: '#c85b2f' },
   ],
+  exposure: [
+    { key: 'affectedTaskMass', label: 'All affected tasks', color: '#1d211e' },
+    { key: 'cognitiveAffectedTaskMass', label: 'Cognitive tasks', color: '#793f31' },
+    { key: 'otherAffectedTaskMass', label: 'Other tasks', color: '#c85b2f' },
+    { key: 'aiTaskShare', label: 'Task instances using technology', color: '#397765' },
+  ],
 };
 
 const parameterControls: Array<{
@@ -69,12 +77,12 @@ const parameterControls: Array<{
   fromInputValue?: (value: number) => number;
 }> = [
   {
-    key: 'affectedTaskMass',
-    label: 'How much work can AI do?',
-    term: 'Affected task mass in 2030',
-    description: 'The share of all work tasks that AI is capable of performing by 2030, whether or not people and companies use it.',
-    format: (value) => `${(value * 100).toFixed(0)}%`,
-    example: (value) => `At ${Math.round(value * 100)}%, AI can perform about ${Math.round(value * 10)} of every 10 tasks in the economy.`,
+    key: 'affectedTaskGrowth',
+    label: 'How quickly does technology’s task capability expand?',
+    term: 'Annual affected-task expansion rate',
+    description: 'The logistic growth rate of the share of all tasks that AI or robotics can perform. Growth slows automatically as the share approaches 100%.',
+    format: (value) => `${(value * 100).toFixed(1)}%/yr`,
+    example: (value) => `At ${(value * 100).toFixed(1)}%, affected task mass rises from 14% in mid-2026 to ${Math.round(affectedTaskMassAt(2030, value) * 100)}% in 2030 and ${Math.round(affectedTaskMassAt(2040, value) * 100)}% in 2040.`,
   },
   {
     key: 'diffusion',
@@ -132,11 +140,11 @@ const parameterControls: Array<{
   },
   {
     key: 'postingSpeed',
-    label: 'How quickly do expanding fields add openings?',
-    term: 'Monthly posting speed',
-    description: 'The share of an occupation group’s worker shortfall that employers post as new vacancies each month.',
+    label: 'How quickly does employment adjust?',
+    term: 'Monthly job adjustment speed',
+    description: 'The share of the gap between employment and modeled labor demand that is added or removed each month.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
-    example: (value) => `At ${Math.round(value * 100)}%, employers post openings for ${Math.round(value * 100)} of every 100 missing workers each month.`,
+    example: (value) => `At ${Math.round(value * 100)}%, employment closes ${Math.round(value * 100)} of every 100 missing or excess jobs each month.`,
   },
 ];
 
@@ -181,8 +189,18 @@ export default function Home() {
     parametersFromScenario(anthropicScenarioById.substantial)
   ));
   const [metric, setMetric] = useState<MetricId>('unemployment');
+  const [terminalYear, setTerminalYear] = useState(TERMINAL_YEAR_RANGE.default);
 
-  const path = useMemo(() => simulateScenarioPath(parameters), [parameters]);
+  const path = useMemo(
+    () => simulateScenarioPath(parameters, { terminalYear }),
+    [parameters, terminalYear],
+  );
+  const chartTicks = useMemo(() => {
+    const ticks = [MODEL_START_YEAR];
+    for (let year = MODEL_START_YEAR + 2; year < terminalYear; year += 2) ticks.push(year);
+    if (ticks.at(-1) !== terminalYear) ticks.push(terminalYear);
+    return ticks;
+  }, [terminalYear]);
   const final = path[path.length - 1];
   const activeScenario = scenarioMode === 'custom' ? null : anthropicScenarioById[scenarioMode];
   const scenarioName = activeScenario?.name ?? 'Custom scenario';
@@ -204,18 +222,18 @@ export default function Home() {
     <main id="top">
       <header className="topbar">
         <a className="brand" href="#top" aria-label="Common Wealth home"><span>CW</span> Common Wealth</a>
-        <nav><span className="status-dot" /> Open model <a href="#boundary">Why 2030?</a><a href="#method">Inputs</a></nav>
+        <nav><span className="status-dot" /> Open model <a href="#boundary">Beyond 2030</a><a href="#method">Inputs</a></nav>
       </header>
 
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">ECONOMIC SCENARIOS FOR TRANSFORMATIVE AI</p>
           <h1>How could AI reshape<br /><em>growth, wages, and jobs?</em></h1>
-          <p className="lede">Build a scenario from the paper’s assumptions and trace its monthly economic path through 2030.</p>
+          <p className="lede">Build a scenario from the published assumptions, then follow a smooth technology and economic path through {terminalYear}.</p>
         </div>
 
-        <div className="horizon" aria-label={`Model horizon ${MODEL_START_YEAR} to ${MODEL_END_YEAR}`}>
-          <span>{MODEL_START_YEAR}</span><i /><strong>49 MONTHLY DATA POINTS</strong><i /><span>{MODEL_END_YEAR}</span>
+        <div className="horizon" aria-label={`Model horizon ${MODEL_START_YEAR} to ${terminalYear}`}>
+          <span>{MODEL_START_YEAR}</span><i /><strong>{path.length} MONTHLY DATA POINTS</strong><i /><span>{terminalYear}</span>
         </div>
 
         <section className="scenario-panel" aria-label="Scenario selection and inputs">
@@ -243,8 +261,26 @@ export default function Home() {
           <div className="parameter-editor" id="method">
             <div className="parameter-heading">
               <p className="section-label"><span>02</span> EDIT THE MODEL INPUTS</p>
-              <p>The 2026 anchors, 2030 endpoints, and labor-market frictions feed the paper’s monthly equations.</p>
+              <p>The 2026 anchors, technology growth paths, and labor-market frictions feed the monthly equations.</p>
             </div>
+            <label className="terminal-control">
+              <span>
+                <b>How far should this scenario run?</b>
+                <em>Terminal year</em>
+                <small>2030 stays close to the published horizon. Later years apply the documented extension through 2040.</small>
+              </span>
+              <strong>{terminalYear}</strong>
+              <input
+                type="range"
+                min={TERMINAL_YEAR_RANGE.min}
+                max={TERMINAL_YEAR_RANGE.max}
+                step={TERMINAL_YEAR_RANGE.step}
+                value={terminalYear}
+                onChange={(event) => setTerminalYear(Number(event.target.value))}
+                style={{ accentColor: scenarioColor }}
+                aria-label="Terminal year"
+              />
+            </label>
             <div className="control-grid">
               {parameterControls.map((control) => {
                 const range = control.inputRange ?? scenarioParameterRanges[control.key];
@@ -282,10 +318,10 @@ export default function Home() {
           <article className="headline-outcome">
             <p className="section-label"><span>03</span> ECONOMY-WIDE UNEMPLOYMENT</p>
             <strong>{pct(final.totalUnemployment)}</strong>
-            <p>in 2030</p>
+            <p>in {terminalYear}</p>
             <small>Normal-times calibration: {pct(NORMAL_UNEMPLOYMENT_RATE)}</small>
           </article>
-          <article><span>GDP VS. NO-AI PATH</span><strong>{signedPct(final.gdpGap)}</strong><small>{pct(final.gdpGrowth)} annual growth in 2030</small></article>
+          <article><span>GDP VS. NO-AI PATH</span><strong>{signedPct(final.gdpGap)}</strong><small>{pct(final.gdpGrowth)} annual growth in {terminalYear}</small></article>
           <article><span>COGNITIVE UNEMPLOYMENT</span><strong>{pct(final.cognitiveUnemployment)}</strong><small>{pct(final.otherUnemployment)} among all other workers</small></article>
           <article><span>LABOR SHARE OF INCOME</span><strong>{pct(final.laborShare)}</strong><small>Capital receives {pct(final.capitalShare)}</small></article>
         </section>
@@ -293,8 +329,8 @@ export default function Home() {
 
       <section className="analysis-section path-section">
         <div className="section-intro">
-          <div><p className="eyebrow">MONTHLY MODEL PATH</p><h2>How the economy changes through 2030.</h2></div>
-          <p>Each line contains all 49 monthly values from January 2026 through January 2030. Hover or tap to inspect a month.</p>
+          <div><p className="eyebrow">MONTHLY MODEL PATH</p><h2>How the economy changes through {terminalYear}.</h2></div>
+          <p>Each line contains all {path.length} monthly values from January 2026 through January {terminalYear}. Hover or tap to inspect a month.</p>
         </div>
 
         <article className="time-chart-card">
@@ -304,7 +340,7 @@ export default function Home() {
               <strong>{scenarioName}</strong>
             </div>
             <div className="metric-tabs" aria-label="Chart outcome">
-              {(['unemployment', 'gdp', 'wages', 'shares'] as MetricId[]).map((item) => (
+              {(['unemployment', 'gdp', 'wages', 'shares', 'exposure'] as MetricId[]).map((item) => (
                 <button key={item} className={metric === item ? 'active' : ''} onClick={() => setMetric(item)}>
                   {item === 'gdp' ? 'GDP' : item[0].toUpperCase() + item.slice(1)}
                 </button>
@@ -325,14 +361,14 @@ export default function Home() {
                 <XAxis
                   dataKey="date"
                   type="number"
-                  domain={[2026, 2030]}
-                  ticks={[2026, 2027, 2028, 2029, 2030]}
+                  domain={[MODEL_START_YEAR, terminalYear]}
+                  ticks={chartTicks}
                   tickFormatter={(value) => String(Math.round(value))}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  domain={metric === 'shares' ? [0, 100] : ['auto', 'auto']}
+                  domain={metric === 'shares' || metric === 'exposure' ? [0, 100] : ['auto', 'auto']}
                   tickFormatter={(value) => `${Number(value).toFixed(0)}%`}
                   axisLine={false}
                   tickLine={false}
@@ -340,6 +376,9 @@ export default function Home() {
                 />
                 {metric === 'unemployment' && (
                   <ReferenceLine y={NORMAL_UNEMPLOYMENT_RATE} stroke="#9b9d97" strokeDasharray="5 5" />
+                )}
+                {terminalYear > MODEL_END_YEAR && (
+                  <ReferenceLine x={MODEL_END_YEAR} stroke="#9b9d97" strokeDasharray="4 5" />
                 )}
                 <Tooltip content={<TimeTooltip />} />
                 {metricSeries[metric].map((series) => (
@@ -360,15 +399,15 @@ export default function Home() {
           </div>
           <div className="chart-foot">
             <span>2026 empirical anchors</span>
-            <span>Monthly solution of the model’s equations</span>
-            <span>2030 scenario values</span>
+            <span>2030 published horizon</span>
+            <span>{terminalYear} scenario endpoint</span>
           </div>
         </article>
       </section>
 
       <section className="analysis-section distribution-section">
         <div className="section-intro">
-          <div><p className="eyebrow">2030 DISTRIBUTION</p><h2>Who receives national income?</h2></div>
+          <div><p className="eyebrow">{terminalYear} DISTRIBUTION</p><h2>Who receives national income?</h2></div>
           <p>Productivity gains can increase the size of the economy while changing how much goes to workers and owners of capital.</p>
         </div>
         <article className="distribution-card wide">
@@ -386,11 +425,12 @@ export default function Home() {
       </section>
 
       <section className="boundary-section" id="boundary">
-        <div><p className="eyebrow">MODEL BOUNDARY</p><h2>Why the model ends in 2030.</h2></div>
+        <div><p className="eyebrow">POST-2030 EXTENSION</p><h2>What changes after 2030.</h2></div>
         <div className="boundary-copy">
-          <p>The paper models AI’s direct effects on cognitive work but does not model rapid progress in robotics or the automation of physical tasks. Beyond 2030, the occupations absorbing displaced cognitive workers may themselves be transformed.</p>
-          <p>Its capital assumptions are also designed for the short and medium run. Extending them mechanically would turn the paper’s model into an undocumented long-run scenario.</p>
-          <strong>This implementation therefore stops at 2030. Any later extension will begin at this boundary and identify its additional assumptions separately.</strong>
+          <p>Affected task mass follows one logistic path from its 14% mid-2026 anchor toward a 100% ceiling. The growth-rate control replaces the old hard 2030 task-mass endpoint. The published presets map to rates that still reach 20%, 30%, and 50% in 2030.</p>
+          <p>Through 2030, affected tasks remain within cognitive occupations. After 2030, each additional affected task is allocated smoothly across the work that remains, including tasks outside cognitive occupations. Neither group loses affected tasks as the frontier expands.</p>
+          <p>Diffusion continues on its existing logistic path. Task productivity preserves its 2030 level and growth rate, then gradually approaches an assumed 30x task-output ceiling. Employment moves partway toward labor demand each month through the selected adjustment speed.</p>
+          <strong>Results after 2030 extend the framework under these assumptions and are not values reported by the original authors.</strong>
         </div>
       </section>
 
