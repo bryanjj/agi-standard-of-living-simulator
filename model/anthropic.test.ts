@@ -59,4 +59,48 @@ describe('Anthropic scenario calibration', () => {
     expect(higherAutomation.laborShare).toBeLessThan(lowerAutomation.laborShare);
     expect(higherAutomation.totalUnemployment).toBeGreaterThan(lowerAutomation.totalUnemployment);
   });
+
+  it('preserves every published-horizon value when the terminal year is extended', () => {
+    const parameters = parametersFromScenario(anthropicScenarioById.substantial);
+    const publishedPath = simulateScenarioPath(parameters);
+    const extendedPath = simulateScenarioPath(parameters, { terminalYear: 2040 });
+
+    expect(extendedPath.slice(0, publishedPath.length)).toEqual(publishedPath);
+    expect(extendedPath).toHaveLength((2040 - 2026) * 12 + 1);
+  });
+
+  it('continues the technology paths smoothly through the 2030 checkpoint', () => {
+    const path = simulateScenarioPath(
+      parametersFromScenario(anthropicScenarioById.substantial),
+      { terminalYear: 2031 },
+    );
+    const checkpoint = path.findIndex((point) => Math.abs(point.date - 2030) < 1e-9);
+    const before = path[checkpoint - 1];
+    const at = path[checkpoint];
+    const after = path[checkpoint + 1];
+
+    for (const key of ['affectedTaskMass', 'diffusion', 'productivityGain'] as const) {
+      const changeBefore = at[key] - before[key];
+      const changeAfter = after[key] - at[key];
+      expect(Math.abs(changeAfter - changeBefore)).toBeLessThan(0.02);
+    }
+  });
+
+  it.each(anthropicScenarios)('returns finite monthly outcomes through 2050 for $name', (scenario) => {
+    const path = simulateScenarioPath(parametersFromScenario(scenario), { terminalYear: 2050 });
+    expect(path).toHaveLength((2050 - 2026) * 12 + 1);
+    expect(path.at(-1)?.date).toBeCloseTo(2050, 10);
+    for (const point of path) {
+      for (const value of Object.values(point)) {
+        if (typeof value === 'number') expect(Number.isFinite(value)).toBe(true);
+      }
+      expect(point.totalUnemployment).toBeGreaterThanOrEqual(0);
+      expect(point.totalUnemployment).toBeLessThanOrEqual(100);
+      expect(point.cognitiveUnemployment).toBeGreaterThanOrEqual(0);
+      expect(point.cognitiveUnemployment).toBeLessThanOrEqual(100);
+      expect(point.otherUnemployment).toBeGreaterThanOrEqual(0);
+      expect(point.otherUnemployment).toBeLessThanOrEqual(100);
+      expect(point.laborShare + point.capitalShare).toBeCloseTo(100, 10);
+    }
+  });
 });

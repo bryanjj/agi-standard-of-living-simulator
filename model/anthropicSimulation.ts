@@ -11,6 +11,10 @@ export type EditableScenarioParameters = {
   productivityAnchor2026: number;
 };
 
+export type ScenarioSimulationOptions = {
+  terminalYear?: number;
+};
+
 export type ScenarioPathPoint = {
   date: number;
   label: string;
@@ -90,6 +94,21 @@ const FIXED = {
   step: 1 / 12,
 } as const;
 
+// ASSUMPTION: The independent extension may run to 2050. The published checkpoint remains 2030.
+export const TERMINAL_YEAR_RANGE = {
+  min: 2030,
+  max: 2050,
+  step: 1,
+  default: 2030,
+  provenance: 'ASSUMPTION',
+} as const;
+
+// ASSUMPTION: After 2030, task-level productivity approaches a 30x ceiling smoothly.
+const EXTENSION_PRODUCTIVITY_MULTIPLIER_CEILING = {
+  value: 30,
+  provenance: 'ASSUMPTION',
+} as const;
+
 // DATA: 2025 CPS occupation-group calibration distributed with Anthropic's explorer.
 const GROUP_WEIGHTS = [0.6235251662150673, 0.3764748337849327];
 const NORMAL_UNEMPLOYMENT = 0.03840656852308217;
@@ -141,15 +160,33 @@ const logisticAt = (time: number, anchor: number, ceiling: number, slope: number
   return ceiling / (1 + Math.exp(-slope * (time - midpoint)));
 };
 
+const productivityAt = (time: number, parameters: EditableScenarioParameters) => {
+  const gainSlope = (parameters.productivityGain - parameters.productivityAnchor2026) / (FIXED.end - FIXED.anchor);
+  const ceiling = Math.log(EXTENSION_PRODUCTIVITY_MULTIPLIER_CEILING.value);
+  const linearGain = parameters.productivityAnchor2026 + gainSlope * (time - FIXED.anchor);
+
+  if (time <= FIXED.end) return clamp(linearGain, 0, ceiling);
+  if (Math.abs(gainSlope) < 1e-12) return clamp(parameters.productivityGain, 0, ceiling);
+
+  const yearsAfterCheckpoint = time - FIXED.end;
+  if (gainSlope > 0) {
+    const remainingGain = ceiling - parameters.productivityGain;
+    if (remainingGain <= 1e-12) return ceiling;
+    return ceiling - remainingGain * Math.exp(-gainSlope * yearsAfterCheckpoint / remainingGain);
+  }
+
+  if (parameters.productivityGain <= 1e-12) return 0;
+  return parameters.productivityGain * Math.exp(gainSlope * yearsAfterCheckpoint / parameters.productivityGain);
+};
+
 const technologyAt = (time: number, parameters: EditableScenarioParameters): TechnologyPath => {
   const mSlope = logisticSlope(0.14, parameters.affectedTaskMass, GROUP_WEIGHTS[0]);
   const dSlope = logisticSlope(0.1, parameters.diffusion, 1);
-  const gainSlope = (parameters.productivityGain - parameters.productivityAnchor2026) / (FIXED.end - FIXED.anchor);
 
   return {
     m: logisticAt(time, 0.14, GROUP_WEIGHTS[0], mSlope),
     d: logisticAt(time, 0.1, 1, dSlope),
-    a: clamp(parameters.productivityAnchor2026 + gainSlope * (time - FIXED.anchor), 0, Math.log(30)),
+    a: productivityAt(time, parameters),
     psi: parameters.automationShare,
     rho: parameters.reinstatementRatio,
   };
@@ -404,7 +441,10 @@ const growthGap = (gdpGap: number, ideasGap: number) => {
   );
 };
 
-const runMonthlySystem = (parameters: EditableScenarioParameters): { rows: SimulationRow[]; ss: SteadyState } => {
+const runMonthlySystem = (
+  parameters: EditableScenarioParameters,
+  terminalYear: number,
+): { rows: SimulationRow[]; ss: SteadyState } => {
   const ss = steadyState();
   const qBase = SEPARATION_RELATIVES.map((relative) => (
     (1 - FIXED.responsiveQuitShare) * FIXED.normalQuitRateAnnual / 12 * relative
@@ -422,7 +462,7 @@ const runMonthlySystem = (parameters: EditableScenarioParameters): { rows: Simul
   let stickyWageGap = 0;
   let ideasGap = 0;
   const rows: SimulationRow[] = [];
-  const months = Math.round((FIXED.end - FIXED.start) / FIXED.step);
+  const months = Math.round((terminalYear - FIXED.start) / FIXED.step);
 
   for (let month = 0; month <= months; month += 1) {
     const time = FIXED.start + month * FIXED.step;
@@ -530,7 +570,10 @@ const interpolateRow = (rows: SimulationRow[], time: number, pick: (row: Simulat
 
 const percentGap = (logGap: number) => 100 * Math.expm1(logGap);
 
-export const simulateScenarioPath = (parameters: EditableScenarioParameters): ScenarioPathPoint[] => {
+export const simulateScenarioPath = (
+  parameters: EditableScenarioParameters,
+  options: ScenarioSimulationOptions = {},
+): ScenarioPathPoint[] => {
   const safe: EditableScenarioParameters = {
     affectedTaskMass: clamp(parameters.affectedTaskMass, 0.14, GROUP_WEIGHTS[0]),
     diffusion: clamp(parameters.diffusion, 0.1, 1),
@@ -541,9 +584,14 @@ export const simulateScenarioPath = (parameters: EditableScenarioParameters): Sc
     postingSpeed: clamp(parameters.postingSpeed, 0.01, 1),
     productivityAnchor2026: clamp(parameters.productivityAnchor2026, 0, 1.5),
   };
-  const { rows } = runMonthlySystem(safe);
+  const terminalYear = clamp(
+    Math.round(options.terminalYear ?? TERMINAL_YEAR_RANGE.default),
+    TERMINAL_YEAR_RANGE.min,
+    TERMINAL_YEAR_RANGE.max,
+  );
+  const { rows } = runMonthlySystem(safe, terminalYear);
 
-  return rows.filter((row) => row.t >= 2026 - 1e-9 && row.t <= 2030 + 1e-9).map((row) => {
+  return rows.filter((row) => row.t >= 2026 - 1e-9 && row.t <= terminalYear + 1e-9).map((row) => {
     const priorYear = row.t - 1;
     const annualGapChange = row.t >= 2025
       ? row.lnYAct - interpolateRow(rows, priorYear, (item) => item.lnYAct)

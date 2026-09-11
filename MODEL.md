@@ -2,7 +2,7 @@
 
 ## Scope
 
-The model covers mid-2026 through the start of 2030 on a monthly grid, matching the horizon in Korinek et al. (2026). The published framework maps assumptions about AI capability, diffusion, productivity, automation, new human tasks, capital supply, wage adjustment, and occupational reallocation into economic outcomes.
+The model begins in mid-2026 and runs on a monthly grid. The default terminal year is 2030, matching the horizon in Korinek et al. (2026). A documented extension can continue the same system through a user-selected terminal year from 2030 to 2050.
 
 ## Monthly implementation
 
@@ -12,7 +12,7 @@ The model covers mid-2026 through the start of 2030 on a monthly grid, matching 
 
 This gives 4% in the modest scenario, 12% in the substantial scenario, and 30% in the extreme scenario at the 2030 checkpoint.
 
-`model/anthropicSimulation.ts` implements the monthly recursion in Appendix A. It begins from the calibrated 2024 steady state, evaluates the scenario paths each month, and returns the 49 observations from January 2026 through January 2030 shown in the interface. The values between endpoints are therefore model solutions, not linear interpolation.
+`model/anthropicSimulation.ts` implements the monthly recursion in Appendix A. It begins from the calibrated 2024 steady state and evaluates the scenario paths each month. At the default horizon, it returns the 49 observations from January 2026 through January 2030 shown in the interface. The values between endpoints are therefore model solutions, not linear interpolation.
 
 The monthly sequence follows the paper:
 
@@ -32,7 +32,7 @@ The three presets can be used as starting points. Editing any control creates a 
 
 - affected task mass in 2030;
 - diffusion share in 2030;
-- log productivity gain in mid-2026 and 2030;
+- task productivity gain in mid-2026 and 2030, displayed as a percentage and converted to log units internally;
 - automation share;
 - reinstatement ratio;
 - cross-occupation search discount; and
@@ -40,8 +40,16 @@ The three presets can be used as starting points. Editing any control creates a 
 
 Affected mass and diffusion use the logistic paths in Equation (8). The log productivity gain follows the paper’s linear path. The remaining scenario parameters are held constant through the simulation, as they are in the published presets.
 
-## Horizon boundary
+## Post-2030 extension
 
-The paper directly exposes cognitive tasks to AI and treats all other occupations as the destination for displaced cognitive workers. It does not model rapid progress in robotics or physical-task automation. Beyond 2030, that second group may no longer be an unaffected destination.
+The 2030 result remains the paper checkpoint. Selecting a later terminal year does not change any monthly input or output through January 2030. Tests compare the entire 2026 to 2030 path from an extended run with the default run.
 
-The framework also uses one capital good, an exogenous capital-supply schedule, and no explicit saving decision. The authors describe these assumptions as short- and medium-run. The project therefore stops in 2030 until a distinct long-run extension is specified.
+After 2030, affected task mass and diffusion continue along the same logistic curves calibrated to their 2026 anchors and 2030 scenario values. Automation share, reinstatement ratio, matching frictions, capital supply, and the other paper parameters remain unchanged.
+
+The paper's log productivity gain is linear through 2030. A permanently linear extrapolation would eventually become implausibly large and hit a hard cap. The extension instead uses a smooth saturation path. If the log productivity slope at 2030 is positive, productivity approaches an assumed 30x task-output ceiling while matching both the 2030 level and slope:
+
+`a(t) = ln(30) - [ln(30) - a(2030)] × exp{-g[t - 2030] / [ln(30) - a(2030)]}`
+
+For a negative 2030 slope, the same construction approaches zero while matching the 2030 level and slope. This avoids a level jump or growth-rate kink at the paper boundary.
+
+The source paper's “cognitive occupations” are labeled “AI-exposed occupations” in the interface. This is still a fixed source cohort, not a growing worker classification. What grows is the share of economy-wide tasks within AI capability. Workers outside direct AI exposure remain the destination for occupational reallocation, and their tasks are not directly automated. A changing worker classification or robotics path would require a separate model.
