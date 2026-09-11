@@ -60,56 +60,74 @@ const metricSeries: Record<MetricId, MetricSeries[]> = {
 const parameterControls: Array<{
   key: keyof EditableScenarioParameters;
   label: string;
+  term: string;
   description: string;
   format: (value: number) => string;
+  example: (value: number) => string;
 }> = [
   {
     key: 'affectedTaskMass',
-    label: 'Affected task mass in 2030',
-    description: 'Share of the economy’s tasks within AI capability.',
+    label: 'How much work can AI do?',
+    term: 'Affected task mass in 2030',
+    description: 'The share of all work tasks that AI is capable of performing by 2030, whether or not people and companies use it.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
+    example: (value) => `At ${Math.round(value * 100)}%, AI can perform about ${Math.round(value * 10)} of every 10 tasks in the economy.`,
   },
   {
     key: 'diffusion',
-    label: 'Diffusion share in 2030',
-    description: 'Share of affected task instances actually performed with AI.',
+    label: 'How widely is capable AI used?',
+    term: 'Diffusion share in 2030',
+    description: 'Of the tasks AI can do, this is the share of real task instances where a worker or company actually uses it.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
+    example: (value) => `At ${Math.round(value * 100)}%, AI is used for about ${Math.round(value * 10)} of every 10 tasks it could perform.`,
   },
   {
     key: 'productivityAnchor2026',
-    label: 'Log gain in mid-2026',
-    description: 'Starting productivity gain on an AI-performed task instance.',
+    label: 'How useful is AI in 2026?',
+    term: 'Log gain in mid-2026',
+    description: 'The starting productivity improvement on a task when AI is used. This anchors the model before it moves toward the 2030 setting.',
     format: (value) => value.toFixed(2),
+    example: (value) => `A ${value.toFixed(2)} log gain means about ${Math.round((Math.exp(value) - 1) * 100)}% more output from the same task inputs.`,
   },
   {
     key: 'productivityGain',
-    label: 'Log gain in 2030',
-    description: 'Ending productivity gain on an AI-performed task instance.',
+    label: 'How useful will AI be in 2030?',
+    term: 'Log gain in 2030',
+    description: 'The productivity improvement on each task instance performed with AI in 2030.',
     format: (value) => value.toFixed(2),
+    example: (value) => `A ${value.toFixed(2)} log gain means about ${Math.round((Math.exp(value) - 1) * 100)}% more output from the same task inputs.`,
   },
   {
     key: 'automationShare',
-    label: 'Automation share',
-    description: 'Share of AI-performed instances completed by capital.',
+    label: 'Does AI assist people or replace their work?',
+    term: 'Automation share',
+    description: 'Of the task instances performed with AI, this is the share completed without labor by software, computers, or other capital.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
+    example: (value) => `At ${Math.round(value * 100)}%, ${Math.round(value * 100)} of every 100 AI-performed task instances are automated; the rest assist workers.`,
   },
   {
     key: 'reinstatementRatio',
-    label: 'Reinstatement ratio',
-    description: 'New labor-task mass created per unit of automated task mass.',
+    label: 'How much new human work is created?',
+    term: 'Reinstatement ratio',
+    description: 'The amount of new labor tasks created for people as existing tasks move from workers to capital.',
     format: (value) => value.toFixed(2),
+    example: (value) => `At ${value.toFixed(2)}, automating 100 task units creates ${Math.round(value * 100)} new task units for people.`,
   },
   {
     key: 'searchDiscount',
-    label: 'Cross-occupation search',
-    description: 'Relative search effectiveness outside a worker’s occupation group.',
+    label: 'How hard is it to switch careers?',
+    term: 'Cross-occupation search discount',
+    description: 'How effective a displaced worker’s job search is outside their previous occupation group, compared with searching within it.',
     format: (value) => value.toFixed(2),
+    example: (value) => `At ${value.toFixed(2)}, an outside-field search is modeled as ${Math.round(value * 100)}% as effective as an in-field search.`,
   },
   {
     key: 'postingSpeed',
-    label: 'Monthly posting speed',
-    description: 'Share of expanding occupations’ shortfall posted each month.',
+    label: 'How quickly do expanding fields add openings?',
+    term: 'Monthly posting speed',
+    description: 'The share of an occupation group’s worker shortfall that employers post as new vacancies each month.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
+    example: (value) => `At ${Math.round(value * 100)}%, employers post openings for ${Math.round(value * 100)} of every 100 missing workers each month.`,
   },
 ];
 
@@ -224,7 +242,10 @@ export default function Home() {
                 const value = parameters[control.key];
                 return (
                   <label key={control.key} className="parameter-control">
-                    <span><b>{control.label}</b><strong>{control.format(value)}</strong></span>
+                    <span>
+                      <b>{control.label}<em>{control.term}</em></b>
+                      <strong>{control.format(value)}</strong>
+                    </span>
                     <input
                       type="range"
                       min={range.min}
@@ -236,6 +257,7 @@ export default function Home() {
                       aria-label={control.label}
                     />
                     <small>{control.description}</small>
+                    <p>{control.example(value)}</p>
                   </label>
                 );
               })}
@@ -258,7 +280,7 @@ export default function Home() {
 
       <section className="analysis-section path-section">
         <div className="section-intro">
-          <div><p className="eyebrow">MONTHLY MODEL PATH</p><h2>The path, not just the endpoint.</h2></div>
+          <div><p className="eyebrow">MONTHLY MODEL PATH</p><h2>How the economy changes through 2030.</h2></div>
           <p>Each line contains all 49 monthly values from January 2026 through January 2030. Hover or tap to inspect a month.</p>
         </div>
 
