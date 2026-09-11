@@ -64,6 +64,9 @@ const parameterControls: Array<{
   description: string;
   format: (value: number) => string;
   example: (value: number) => string;
+  inputRange?: { min: number; max: number; step: number };
+  toInputValue?: (value: number) => number;
+  fromInputValue?: (value: number) => number;
 }> = [
   {
     key: 'affectedTaskMass',
@@ -83,19 +86,25 @@ const parameterControls: Array<{
   },
   {
     key: 'productivityAnchor2026',
-    label: 'How useful is AI in 2026?',
-    term: 'Log gain in mid-2026',
-    description: 'The starting productivity improvement on a task when AI is used. This anchors the model before it moves toward the 2030 setting.',
-    format: (value) => value.toFixed(2),
-    example: (value) => `A ${value.toFixed(2)} log gain means about ${Math.round((Math.exp(value) - 1) * 100)}% more output from the same task inputs.`,
+    label: 'How much more useful does AI make tasks in 2026?',
+    term: 'Productivity gain in mid-2026',
+    description: 'The percentage increase in output on a task when AI is used. This anchors the model before it moves toward the 2030 setting.',
+    format: (value) => `${Math.round(value)}%`,
+    example: (value) => `${Math.round(value)}% means ${Number((1 + value / 100).toFixed(2))}x as much output from the same task inputs.`,
+    inputRange: { min: 11, max: 348, step: 1 },
+    toInputValue: (value) => Math.round((Math.exp(value) - 1) * 100),
+    fromInputValue: (value) => Math.log1p(value / 100),
   },
   {
     key: 'productivityGain',
-    label: 'How useful will AI be in 2030?',
-    term: 'Log gain in 2030',
-    description: 'The productivity improvement on each task instance performed with AI in 2030.',
-    format: (value) => value.toFixed(2),
-    example: (value) => `A ${value.toFixed(2)} log gain means about ${Math.round((Math.exp(value) - 1) * 100)}% more output from the same task inputs.`,
+    label: 'How much more useful will AI make tasks in 2030?',
+    term: 'Productivity gain in 2030',
+    description: 'The percentage increase in output on each task instance performed with AI in 2030.',
+    format: (value) => `${Math.round(value)}%`,
+    example: (value) => `${Math.round(value)}% means ${Number((1 + value / 100).toFixed(2))}x as much output from the same task inputs.`,
+    inputRange: { min: 11, max: 348, step: 1 },
+    toInputValue: (value) => Math.round((Math.exp(value) - 1) * 100),
+    fromInputValue: (value) => Math.log1p(value / 100),
   },
   {
     key: 'automationShare',
@@ -238,26 +247,30 @@ export default function Home() {
             </div>
             <div className="control-grid">
               {parameterControls.map((control) => {
-                const range = scenarioParameterRanges[control.key];
+                const range = control.inputRange ?? scenarioParameterRanges[control.key];
                 const value = parameters[control.key];
+                const inputValue = control.toInputValue?.(value) ?? value;
                 return (
                   <label key={control.key} className="parameter-control">
                     <span>
                       <b>{control.label}<em>{control.term}</em></b>
-                      <strong>{control.format(value)}</strong>
+                      <strong>{control.format(inputValue)}</strong>
                     </span>
                     <input
                       type="range"
                       min={range.min}
                       max={range.max}
                       step={range.step}
-                      value={value}
-                      onChange={(event) => editParameter(control.key, Number(event.target.value))}
+                      value={inputValue}
+                      onChange={(event) => {
+                        const nextValue = Number(event.target.value);
+                        editParameter(control.key, control.fromInputValue?.(nextValue) ?? nextValue);
+                      }}
                       style={{ accentColor: scenarioColor }}
                       aria-label={control.label}
                     />
                     <small>{control.description}</small>
-                    <p>{control.example(value)}</p>
+                    <p>{control.example(inputValue)}</p>
                   </label>
                 );
               })}
