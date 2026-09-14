@@ -17,7 +17,7 @@ Every value exposed by `model/anthropic.ts` has a provenance label:
 - `ASSUMPTION`: introduced by this independent implementation.
 - `CALCULATED`: derived from other documented values.
 
-The 14% capability anchor, preset 2030 endpoints, and labor-market calibration use `PAPER` or `DATA` values. The 100% capability ceiling, one-for-one mapping from net eliminated labor-weighted task mass to job capacity, reinterpretation of search effectiveness and posting speed, 30x productivity ceiling, smooth labor-flow threshold, and 2040 horizon are `ASSUMPTION` values or rules. Monthly chart values are `CALCULATED` outputs.
+The 14% capability anchor, preset 2030 endpoints, and labor-market calibration use `PAPER` or `DATA` values. The 100% capability ceiling, one-for-one mapping from net eliminated labor-weighted task mass to job capacity, reinterpretation of search effectiveness and posting speed, 30x productivity ceiling, smooth labor-flow threshold, and fixed 2040 interface horizon are `ASSUMPTION` values or rules. Monthly chart values are `CALCULATED` outputs.
 
 The frozen-2026 comparison is an `ASSUMPTION`: it holds the technology state fixed after the paper's mid-2026 anchor rather than attempting to remove AI already present in the calibration. The GDP and real-wage levels use the paper's baseline TFP, labor-share, and labor-force-growth values to carry forward the economic trend common to both paths.
 

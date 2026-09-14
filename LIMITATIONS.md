@@ -2,7 +2,7 @@
 
 - **Scenario tool, not a probability distribution.** The presets and custom settings receive no probability weights and should not be interpreted as forecasts.
 - **Aggregate monthly paths.** The model solves aggregate stocks and flows. Monthly points do not represent observations of individual workers.
-- **Post-2030 extension.** Results after 2030 rely on independent assumptions and are not values reported by the original authors.
+- **Fixed 2040 endpoint.** The interface always displays the full path through 2040. Results after 2030 rely on independent assumptions and are not values reported by the original authors; the later years are most useful as a sensitivity test.
 - **Unified technology frontier.** One affected-task path combines advances in software AI and robotics. It does not separately calibrate their speed, diffusion, productivity, or capital requirements.
 - **One worker pool.** The extension removes the paper's cognitive and all-other occupation groups once both can be exposed. It cannot show occupation-specific wages, unemployment, switching routes, or skill requirements.
 - **Task-to-job mapping.** The extension assumes task mass is weighted by required labor and maps net eliminated task mass one-for-one to the long-run human-employment target. It does not estimate heterogeneous task weights, hours, occupations, or the number of tasks bundled into a job.

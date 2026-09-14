@@ -21,13 +21,13 @@ import {
 } from '../model/anthropic';
 import {
   affectedTaskMassAt,
+  MODEL_TERMINAL_YEAR,
   parametersFromScenario,
   REAL_ANNUAL_WAGE_2026,
   REAL_GDP_2026_TRILLIONS,
   scenarioParameterRanges,
   simulateFrozen2026Baseline,
   simulateScenarioPath,
-  TERMINAL_YEAR_RANGE,
   type EditableScenarioParameters,
   type ScenarioPathPoint,
 } from '../model/anthropicSimulation';
@@ -201,7 +201,7 @@ export default function Home() {
     parametersFromScenario(anthropicScenarioById.substantial)
   ));
   const [metric, setMetric] = useState<MetricId>('unemployment');
-  const [terminalYear, setTerminalYear] = useState(TERMINAL_YEAR_RANGE.default);
+  const terminalYear = MODEL_TERMINAL_YEAR.value;
 
   const scenarioPath = useMemo(
     () => simulateScenarioPath(parameters, { terminalYear }),
@@ -223,12 +223,9 @@ export default function Home() {
     if (ticks.at(-1) !== terminalYear) ticks.push(terminalYear);
     return ticks;
   }, [terminalYear]);
-  const final = path[path.length - 1];
   const activeScenario = scenarioMode === 'custom' ? null : anthropicScenarioById[scenarioMode];
   const scenarioName = activeScenario?.name ?? 'Custom scenario';
   const scenarioColor = activeScenario?.color ?? '#b14e30';
-  const laborShareWidth = final.laborShare.toFixed(4);
-  const capitalShareWidth = final.capitalShare.toFixed(4);
 
   const choosePreset = (id: AnthropicScenarioId) => {
     setScenarioMode(id);
@@ -285,24 +282,6 @@ export default function Home() {
               <p className="section-label"><span>02</span> EDIT THE MODEL INPUTS</p>
               <p>The 2026 anchors, technology growth paths, and labor-market frictions feed the monthly equations.</p>
             </div>
-            <label className="terminal-control">
-              <span>
-                <b>How far should this scenario run?</b>
-                <em>Terminal year</em>
-                <small>2030 stays close to the published horizon. Later years apply the documented extension through 2040.</small>
-              </span>
-              <strong>{terminalYear}</strong>
-              <input
-                type="range"
-                min={TERMINAL_YEAR_RANGE.min}
-                max={TERMINAL_YEAR_RANGE.max}
-                step={TERMINAL_YEAR_RANGE.step}
-                value={terminalYear}
-                onChange={(event) => setTerminalYear(Number(event.target.value))}
-                style={{ accentColor: scenarioColor }}
-                aria-label="Terminal year"
-              />
-            </label>
             <div className="control-grid">
               {parameterControls.map((control) => {
                 const range = control.inputRange ?? scenarioParameterRanges[control.key];
@@ -336,17 +315,6 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="outcome-grid" aria-live="polite">
-          <article className="headline-outcome">
-            <p className="section-label"><span>03</span> ECONOMY-WIDE UNEMPLOYMENT</p>
-            <strong>{pct(final.totalUnemployment)}</strong>
-            <p>in {terminalYear}</p>
-            <small>Normal-times calibration: {pct(NORMAL_UNEMPLOYMENT_RATE)}</small>
-          </article>
-          <article><span>REAL GDP · 2026 DOLLARS</span><strong>{gdpValue(final.realGdpTrillions)}</strong><small>Frozen-2026 baseline: {gdpValue(final.baselineRealGdpTrillions)}</small></article>
-          <article><span>HUMAN JOB CAPACITY ELIMINATED</span><strong>{pct(final.eliminatedJobShare)}</strong><small>Net of new human tasks created since 2024</small></article>
-          <article><span>LABOR SHARE OF INCOME</span><strong>{pct(final.laborShare)}</strong><small>Capital receives {pct(final.capitalShare)}</small></article>
-        </section>
       </section>
 
       <section className="analysis-section path-section">
@@ -423,28 +391,8 @@ export default function Home() {
             </ResponsiveContainer>
           </div>
           <div className="chart-foot">
-            <span>2026 empirical anchors</span>
             <span>2030 published horizon</span>
             <span>{terminalYear} scenario endpoint</span>
-          </div>
-        </article>
-      </section>
-
-      <section className="analysis-section distribution-section">
-        <div className="section-intro">
-          <div><p className="eyebrow">{terminalYear} DISTRIBUTION</p><h2>Who receives national income?</h2></div>
-          <p>Productivity gains can increase the size of the economy while changing how much goes to workers and owners of capital.</p>
-        </div>
-        <article className="distribution-card wide">
-          <div className="card-heading"><span>LABOR AND CAPITAL SHARES</span><strong>{scenarioName}</strong></div>
-          <div className="share-bar" aria-label={`${laborShareWidth}% labor and ${capitalShareWidth}% capital`}>
-            <span style={{ width: `${laborShareWidth}%` }}><b>{pct(final.laborShare)}</b> Labor</span>
-            <span style={{ width: `${capitalShareWidth}%` }}><b>{pct(final.capitalShare)}</b> Capital</span>
-          </div>
-          <div className="wage-list">
-            <span><small>AVERAGE ANNUAL WAGE · 2026 DOLLARS</small><strong>{wageValue(final.realAnnualWage)}</strong><em>Baseline {wageValue(final.baselineRealAnnualWage)}</em></span>
-            <span><small>AFFECTED TASK MASS</small><strong>{pct(final.affectedTaskMass)}</strong></span>
-            <span><small>HUMAN JOB CAPACITY ELIMINATED</small><strong>{pct(final.eliminatedJobShare)}</strong></span>
           </div>
         </article>
       </section>

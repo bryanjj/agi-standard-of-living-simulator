@@ -2,7 +2,7 @@
 
 ## Scope
 
-The model runs on a monthly grid from 2026 through a user-selected terminal year from 2030 to 2040. It preserves the production, capital, ideas, and matching blocks in Korinek et al. (2026), then adds explicit assumptions for a technology frontier that can expand beyond cognitive tasks.
+The public interface runs on a monthly grid from 2026 through a fixed 2040 endpoint. It preserves the production, capital, ideas, and matching blocks in Korinek et al. (2026), then adds explicit assumptions for a technology frontier that can expand beyond cognitive tasks. The implementation can still calculate a shorter path for testing and the published 2030 checkpoint, but the interface presents the complete extension.
 
 The post-2030 labor market uses one economy-wide worker pool. This is necessary because the paper's two-group target is derived from the assumption that the second group is never directly affected by AI. Once AI or robotics can reach those tasks, that group can no longer serve as a permanent destination for displaced workers.
 

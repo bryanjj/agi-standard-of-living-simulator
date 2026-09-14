@@ -102,12 +102,9 @@ export const AVERAGE_WEEKLY_EARNINGS_2026 = 1289.34;
 // CALCULATED: 52 weeks × the June 2026 average weekly earnings observation.
 export const REAL_ANNUAL_WAGE_2026 = AVERAGE_WEEKLY_EARNINGS_2026 * 52;
 
-// ASSUMPTION: The first long-run implementation can be displayed through 2040.
-export const TERMINAL_YEAR_RANGE = {
-  min: 2030,
-  max: 2040,
-  step: 1,
-  default: 2040,
+// ASSUMPTION: The public interface uses 2040 as its fixed long-run scenario endpoint.
+export const MODEL_TERMINAL_YEAR = {
+  value: 2040,
   provenance: 'ASSUMPTION',
 } as const;
 
@@ -497,9 +494,9 @@ export const simulateScenarioPath = (
     productivityAnchor2026: clamp(parameters.productivityAnchor2026, 0, 1.5),
   };
   const terminalYear = clamp(
-    Math.round(options.terminalYear ?? TERMINAL_YEAR_RANGE.default),
-    TERMINAL_YEAR_RANGE.min,
-    TERMINAL_YEAR_RANGE.max,
+    Math.round(options.terminalYear ?? MODEL_TERMINAL_YEAR.value),
+    FIXED.end,
+    MODEL_TERMINAL_YEAR.value,
   );
   const freezeTechnologyAfter = options.freezeTechnologyAfter == null
     ? undefined
