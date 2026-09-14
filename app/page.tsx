@@ -66,7 +66,7 @@ const metricSeries: Record<MetricId, MetricSeries[]> = {
   exposure: [
     { key: 'affectedTaskMass', label: 'All affected tasks', color: '#1d211e' },
     { key: 'aiTaskShare', label: 'Task instances using technology', color: '#397765' },
-    { key: 'eliminatedJobShare', label: 'Human job capacity eliminated', color: '#c85b2f' },
+    { key: 'eliminatedJobShare', label: 'Net automated task mass', color: '#c85b2f' },
   ],
 };
 
@@ -75,7 +75,7 @@ const metricYAxisLabels: Record<MetricId, string> = {
   gdp: 'Real GDP ($T, 2026 dollars)',
   wages: 'Average annual wage ($, 2026 dollars)',
   shares: 'Share of national income (%)',
-  exposure: 'Task or job-capacity share (%)',
+  exposure: 'Share of task mass (%)',
 };
 
 const parameterControls: Array<{
@@ -145,19 +145,19 @@ const parameterControls: Array<{
   },
   {
     key: 'reemploymentEffectiveness',
-    label: 'How easily do displaced workers find new work?',
-    term: 'Displaced-worker search effectiveness',
-    description: 'How effective job search is for workers displaced by technology, relative to workers changing jobs in normal times.',
+    label: 'How easily can displaced workers move into other work?',
+    term: 'Cross-occupation search effectiveness',
+    description: 'How effective a worker’s search is outside their previous occupation group, relative to search within that group.',
     format: (value) => value.toFixed(2),
-    example: (value) => `At ${value.toFixed(2)}, a displaced worker’s search is modeled as ${Math.round(value * 100)}% as effective as a normal job search.`,
+    example: (value) => `At ${value.toFixed(2)}, a worker contributes ${Math.round(value * 100)}% as much effective search to vacancies outside their previous occupation group.`,
   },
   {
     key: 'postingSpeed',
-    label: 'How quickly does employment adjust?',
-    term: 'Monthly employment adjustment speed',
-    description: 'After technology lowers the number of human jobs supported by the task mix, this is the share of the remaining employment gap that closes each month.',
+    label: 'How quickly do expanding occupations post jobs?',
+    term: 'Monthly vacancy-posting speed',
+    description: 'The share of the gap between current and desired employment that expanding occupations post as vacancies each month.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
-    example: (value) => `At ${Math.round(value * 100)}%, employers close ${Math.round(value * 100)} of every 100 excess positions each month after ordinary quits are counted.`,
+    example: (value) => `At ${Math.round(value * 100)}%, an occupation that is 100 workers below its desired size posts vacancies for ${Math.round(value * 100)} of that shortfall each month.`,
   },
 ];
 
@@ -425,7 +425,7 @@ export default function Home() {
           <ol className="extension-list">
             <li><b>Affected task mass keeps growing.</b><span>The selected annual expansion rate carries task capability toward a maximum of 100%.</span></li>
             <li><b>Diffusion and task productivity continue smoothly.</b><span>Diffusion stays on its existing path. After 2030, task productivity continues at the same scenario-specific log growth rate used through 2030.</span></li>
-            <li><b>Workers share one labor market.</b><span>Job capacity falls only when affected tasks are used, automated, and not offset by reinstatement. Automating a role does not automatically create a replacement opening.</span></li>
+            <li><b>Workers can move toward growing work.</b><span>The model tracks two internal occupation groups. As technology changes their relative human task demand, expanding occupations post vacancies and displaced workers can search across groups.</span></li>
             <li><b>The comparison freezes technology in mid-2026.</b><span>The dashed line holds task capability, diffusion, and AI task productivity fixed while ordinary economic growth continues.</span></li>
           </ol>
           <p className="measurement-note">Dollar values use 2026 reference levels: {gdpValue(REAL_GDP_2026_TRILLIONS)} of annualized U.S. GDP and {wageValue(REAL_ANNUAL_WAGE_2026)} of annual earnings for the average private-sector payroll worker.</p>

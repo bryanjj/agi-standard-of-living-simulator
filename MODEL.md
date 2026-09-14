@@ -2,31 +2,29 @@
 
 ## Scope
 
-The public interface runs on a monthly grid from 2026 through a fixed 2040 endpoint. It preserves the production, capital, ideas, and matching blocks in Korinek et al. (2026), then adds explicit assumptions for a technology frontier that can expand beyond cognitive tasks. The implementation can still calculate a shorter path for testing and the published 2030 checkpoint, but the interface presents the complete extension.
+The public interface runs on a monthly grid from 2026 through a fixed 2040 endpoint. It preserves the production, capital, ideas, wage, and labor-matching blocks in Korinek et al. (2026), then adds an explicit assumption for a technology frontier that can expand beyond the paper's initially exposed occupations.
 
-The post-2030 labor market uses one economy-wide worker pool. This is necessary because the paper's two-group target is derived from the assumption that the second group is never directly affected by AI. Once AI or robotics can reach those tasks, that group can no longer serve as a permanent destination for displaced workers.
+The labor market retains the paper's two internal occupation groups so workers displaced from contracting work can move toward expanding work. The public interface reports all-worker outcomes. After the affected-task frontier reaches the initially exposed group, additional exposure passes smoothly into the second group rather than treating it as permanently protected.
 
 ## Monthly implementation
 
-`model/anthropic.ts` contains the three published scenario calibrations and their Table 3 outcomes. The interface derives the share of task instances performed with AI as:
+`model/anthropic.ts` contains the three published scenario calibrations and their Table 3 outcomes. The interface calculates the share of task instances performed with AI as:
 
 `affected task mass × diffusion share`
 
 This gives 4% in the modest scenario, 12% in the substantial scenario, and 30% in the extreme scenario at the 2030 checkpoint.
 
-`model/anthropicSimulation.ts` implements the monthly recursion. It begins from the calibrated 2024 steady state and evaluates the technology, production, capital, employment-target, matching, and ideas equations each month. Monthly chart values are model solutions rather than interpolation.
-
-The monthly sequence is:
+`model/anthropicSimulation.ts` implements the monthly recursion. It begins from the calibrated 2024 steady state and evaluates technology, production, capital, labor demand, vacancies, matching, and ideas each month:
 
 1. Evaluate logistic paths for affected task mass and diffusion, plus the smooth productivity path.
-2. Solve the paper's exact task-production block and capital-market root.
-3. Calculate net human task elimination from the four technology parameters and convert it into a target for human employment.
-4. Count ordinary quits toward any required employment contraction, then close a fraction of the remaining gap through layoffs.
-5. Post vacancies only for human jobs that remain in the target.
-6. Match unemployed workers to vacancies with the paper's bounded CES matching function.
+2. Solve the paper's task-production block and capital-market root.
+3. Calculate the human task share and relative desired employment in each internal occupation group.
+4. Let contracting work shed labor through quits and layoffs while expanding work posts vacancies toward its target.
+5. Match unemployed workers to both groups with the paper's bounded CES matching function and cross-occupation search friction.
+6. Apply the paper's wage rigidity to the initially exposed group.
 7. Update employment, unemployment, GDP, wages, factor shares, and the ideas stock.
 
-The preset inputs still reach the published affected-task masses in 2030. The economic outcomes are no longer intended to replicate the paper's group-specific unemployment results because the post-2030 extension removes the permanent unexposed occupation group on which those results depend.
+The preset inputs still reach affected-task masses of 20%, 30%, and 50% in 2030. Their simulated unemployment rates are 3.90%, 4.59%, and 12.53%, close to the paper's reported 3.9%, 4.6%, and 11.9%. After 2030, both groups can eventually be reached by the unified technology frontier, so later values are extension outputs rather than paper replications.
 
 ## Editable scenarios
 
@@ -37,8 +35,8 @@ The three presets can be used as starting points. Editing any control creates a 
 - log productivity gain in mid-2026 and 2030;
 - automation share;
 - reinstatement ratio;
-- displaced-worker search effectiveness; and
-- monthly employment-adjustment speed.
+- cross-occupation search effectiveness; and
+- monthly vacancy-posting speed.
 
 Affected task mass begins at 14% in mid-2026 and follows a 100%-ceiling logistic. If `r` is the annual expansion rate and `m0 = 0.14`, then:
 
@@ -48,34 +46,32 @@ Affected task mass begins at 14% in mid-2026 and follows a 100%-ceiling logistic
 
 The preset rates are calculated so affected task mass reaches 20%, 30%, and 50% in 2030. The substantial rate is approximately 27.7% per year and implies approximately 87.2% affected task mass in 2040.
 
-## One-pool labor adjustment
+## Labor reallocation and matching
 
-The paper's task framework distinguishes automation, which moves a task from labor to capital, from reinstatement, which creates new tasks for labor. In the one-pool extension, human job capacity is determined directly by the four technology parameters. Let `m(t)` be affected task mass, `d(t)` diffusion, `psi` automation share, and `rho` the reinstatement ratio. Net eliminated human task mass is:
+The task framework distinguishes automation, which moves a task from labor to capital, from reinstatement, which creates new tasks for labor. Let `m(t)` be affected task mass, `d(t)` diffusion, `psi` automation share, and `rho` the reinstatement ratio. Net automated task mass is:
 
 `N(t) = m(t) × d(t) × psi × (1 - rho)`
 
-Tasks where AI augments a worker rather than automating the task remain human tasks. Each reinstated task offsets one automated task unit. Productivity changes output per AI-used task but does not independently add or remove human tasks.
+Tasks where AI augments a worker rather than automating the task remain human tasks. Each reinstated task offsets one automated task unit. This quantity is shown in the technology-exposure chart, but it is not treated as a one-for-one loss of jobs.
 
-Let `N0` be the task elimination already embodied in the calibrated 2024 labor market and `E0` normal-times employment. The change from that baseline and the human-employment target are:
+Internally, the paper's calibration assigns 62.35% of initial task mass to the initially exposed group and 37.65% to other work. A narrow smooth transition lets the frontier spill into other work as total affected task mass passes the first group's boundary. This preserves the unified 100%-ceiling technology path without a discontinuity.
 
-`Delta N(t) = [N(t) - N0] / [1 - N0]`
+Production determines how much human task demand remains in each group. Those shares define relative desired employment while total desired employment remains at the calibrated normal-employment level. A contraction in one group can therefore coexist with openings in the other. There is no assumption that every automated task creates one job, and there is no assumption that automation permanently removes the same percentage of aggregate jobs.
 
-`E*(t) = E0 × [1 - Delta N(t)]`
+Each month, the initially exposed group's labor demand also responds to its sticky wage using the paper's demand equation. The other group's target follows its remaining human task share. Ordinary quits absorb some contraction, layoffs close excess employment, and expanding groups post vacancies equal to the selected fraction of their employment shortfall.
 
-The one-for-one mapping from labor-weighted task mass to job capacity is an extension assumption. It keeps permanent AI-related employment loss bounded by net eliminated task mass. Eliminating a job does not create a replacement opening automatically.
+Unemployed workers retain their occupation of origin for search accounting. They search most effectively within that group and contribute the selected fraction of effective search to the other group's vacancies. The bounded matching function from Equation (34) limits hires when either search or vacancies are scarce. Output growth and complementarity can create demand for human work, but openings do not become hires automatically.
 
-Each month, ordinary quits count toward any decline in `E*`. If employment after quits still exceeds next month's target, the selected adjustment-speed fraction of that excess becomes layoffs. If employment is below the target, employers post only enough vacancies to fill the remaining human jobs. The paper's bounded matching function determines how many of those vacancies produce hires.
-
-There is one unemployment stock and one vacancy market. Total unemployment combines the normal unemployment pool, structural employment loss implied by `Delta N`, and any temporary gap caused by supported jobs remaining unfilled. The matching function is the bounded CES form from Equation (34) of the paper. The former cross-occupation search parameter is reinterpreted as displaced-worker search effectiveness. Normal unemployment supplies one unit of search per worker; unemployment above the normal pool supplies the selected fraction. This retains the paper's idea that displaced workers may search less effectively because their previous skills or occupation no longer match available work, without assigning them to a permanent origin group.
+At the extreme 2030 preset, the model moves from roughly 60.0% to 46.4% employed in the initially exposed group and from roughly 36.2% to 41.1% employed in other work, leaving 12.5% unemployed.
 
 ## Frozen-2026 comparison
 
-GDP, real wages, and unemployment are shown against a second run of the same model. The comparison follows the selected scenario through the mid-2026 technology anchor, then holds affected task mass, diffusion, and AI task productivity fixed at those levels. Automation and reinstatement shares are already constant scenario parameters. Ordinary TFP, labor-force, ideas, capital, quit, vacancy, and matching dynamics continue.
+GDP, real wages, and unemployment are shown against a second run of the same model. The comparison follows the selected scenario through the mid-2026 technology anchor, then holds affected task mass, diffusion, and AI task productivity fixed at those levels. Automation and reinstatement shares are constant scenario parameters. Ordinary TFP, labor-force, ideas, capital, quit, vacancy, and matching dynamics continue.
 
-GDP and real wages are displayed in constant 2026 dollars. The GDP path is anchored to the BEA's 2026 Q2 seasonally adjusted annual rate of $32.486 trillion. The wage path is anchored to the BLS June 2026 average weekly earnings of $1,289.34 for private nonfarm payroll workers, annualized to $67,045.68. Their common trend growth is calculated from the paper's baseline calibration: real wages grow with labor-augmenting ideas at `baseline TFP growth / labor share`, and GDP also includes labor-force growth. These anchors change the units, not the relative shape or scenario comparison.
+GDP and real wages are displayed in constant 2026 dollars. GDP is anchored to the BEA's 2026 Q2 seasonally adjusted annual rate of $32.486 trillion. Wages are anchored to the BLS June 2026 average weekly earnings of $1,289.34 for private nonfarm payroll workers, annualized to $67,045.68. Their common trend growth is calculated from the paper's baseline calibration. These anchors change the units, not the relative shape or scenario comparison.
 
 ## Other extension assumptions
 
 Diffusion continues along the logistic calibrated to its 2026 anchor and 2030 setting. Automation and reinstatement shares remain constant. After 2030, task productivity continues at the same scenario-specific linear log growth rate used through 2030. At 2040, this gives task-output multipliers of approximately 1.35x in the modest scenario, 2.09x in the substantial scenario, and 6.05x in the extreme scenario. Anthropic does not specify this post-2030 continuation.
 
-A smooth positive-part function is used for employment gaps and excess unemployment. The technology, production, employment-target, vacancy, and matching rules therefore change continuously without a special switch at 2030.
+A smooth positive-part function is used for employment gaps, and the affected-task split uses a smooth frontier transition. The technology, production, vacancy, and matching rules change continuously without a special switch at 2030.
