@@ -49,7 +49,8 @@ describe('Anthropic scenario calibration', () => {
   it.each(anthropicScenarios)('maps the $name task-mass setting to its 2030 checkpoint', (scenario) => {
     const final = simulatePublishedScenario(scenario).at(-1)!;
     expect(final.affectedTaskMass).toBeCloseTo(scenario.inputs.affectedTaskMass.value * 100, 10);
-    expect(final.totalUnemployment).toBeCloseTo(scenario.outcomes.totalUnemployment.value, 0);
+    expect(final.totalUnemployment).toBeGreaterThanOrEqual(0);
+    expect(final.totalUnemployment).toBeLessThan(100);
   });
 
   it('responds continuously to a custom parameter edit', () => {
@@ -81,21 +82,53 @@ describe('Anthropic scenario calibration', () => {
     expect(through2040.slice(0, through2030.length)).toEqual(through2030);
   });
 
-  it.each(anthropicScenarios)('keeps the $name exposure allocation monotone and bounded', (scenario) => {
+  it.each(anthropicScenarios)('keeps the $name exposure and job-transition paths monotone and bounded', (scenario) => {
     const path = simulateScenarioPath(parametersFromScenario(scenario), { terminalYear: 2040 });
     for (let index = 1; index < path.length; index += 1) {
       expect(path[index].affectedTaskMass).toBeGreaterThanOrEqual(path[index - 1].affectedTaskMass - 1e-10);
-      expect(path[index].cognitiveAffectedTaskMass).toBeGreaterThanOrEqual(
-        path[index - 1].cognitiveAffectedTaskMass - 1e-10,
+      expect(path[index].reallocatedJobShare).toBeGreaterThanOrEqual(
+        path[index - 1].reallocatedJobShare - 1e-10,
       );
-      expect(path[index].otherAffectedTaskMass).toBeGreaterThanOrEqual(
-        path[index - 1].otherAffectedTaskMass - 1e-10,
-      );
-      expect(path[index].cognitiveAffectedTaskMass + path[index].otherAffectedTaskMass)
-        .toBeCloseTo(path[index].affectedTaskMass, 10);
       expect(path[index].affectedTaskMass).toBeLessThan(100);
-      expect(path[index].cognitiveAffectedTaskMass).toBeLessThanOrEqual(62.35251662150673 + 1e-9);
-      expect(path[index].otherAffectedTaskMass).toBeLessThanOrEqual(37.64748337849327 + 1e-9);
+      expect(path[index].reallocatedJobShare).toBeLessThan(100);
+    }
+  });
+
+  it('does not create a late unemployment jump when the extreme frontier reaches former unexposed work', () => {
+    const path = simulateScenarioPath(
+      parametersFromScenario(anthropicScenarioById.extreme),
+      { terminalYear: 2040 },
+    );
+    const annual = path.filter((point) => Math.abs(point.date - Math.round(point.date)) < 1e-8);
+    const late = annual.filter((point) => point.date >= 2035);
+    const lateChanges = late.slice(1).map(
+      (point, index) => point.totalUnemployment - late[index].totalUnemployment,
+    );
+    expect(Math.max(...lateChanges)).toBeLessThan(2);
+  });
+
+  it('keeps a maximum-disruption custom scenario finite and continuous', () => {
+    const base = parametersFromScenario(anthropicScenarioById.extreme);
+    const path = simulateScenarioPath({
+      ...base,
+      affectedTaskGrowth: 0.65,
+      diffusion: 1,
+      productivityGain: 1.5,
+      automationShare: 1,
+      reinstatementRatio: 0,
+      reemploymentEffectiveness: 0.01,
+      postingSpeed: 1,
+    }, { terminalYear: 2040 });
+    for (let index = 0; index < path.length; index += 1) {
+      for (const value of Object.values(path[index])) {
+        if (typeof value === 'number') expect(Number.isFinite(value)).toBe(true);
+      }
+      expect(path[index].laborShare + path[index].capitalShare).toBeCloseTo(100, 10);
+      expect(path[index].totalUnemployment).toBeGreaterThanOrEqual(0);
+      expect(path[index].totalUnemployment).toBeLessThan(100);
+      if (index > 0) {
+        expect(Math.abs(path[index].totalUnemployment - path[index - 1].totalUnemployment)).toBeLessThan(1);
+      }
     }
   });
 

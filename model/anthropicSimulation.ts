@@ -6,7 +6,7 @@ export type EditableScenarioParameters = {
   productivityGain: number;
   automationShare: number;
   reinstatementRatio: number;
-  searchDiscount: number;
+  reemploymentEffectiveness: number;
   postingSpeed: number;
   productivityAnchor2026: number;
 };
@@ -19,27 +19,20 @@ export type ScenarioPathPoint = {
   date: number;
   label: string;
   affectedTaskMass: number;
-  cognitiveAffectedTaskMass: number;
-  otherAffectedTaskMass: number;
   diffusion: number;
   productivityGain: number;
   aiTaskShare: number;
+  reallocatedJobShare: number;
   gdpGap: number;
   gdpGrowth: number;
   averageWageGap: number;
-  cognitiveWageGap: number;
-  otherWageGap: number;
   laborShare: number;
   capitalShare: number;
   totalUnemployment: number;
-  cognitiveUnemployment: number;
-  otherUnemployment: number;
 };
 
 type TechnologyPath = {
   m: number;
-  mC: number;
-  mN: number;
   d: number;
   a: number;
   psi: number;
@@ -53,14 +46,14 @@ type PotentialEconomy = {
   lnYL: number;
   xr: number;
   lnK: number;
-  laborTaskShares: [number, number];
+  laborTaskShare: number;
 };
 
 type SteadyState = {
-  ell0: number[];
-  UBar: number[];
-  fBarO: number[];
-  piBar: number[];
+  ell0: number;
+  UBar: number;
+  fBar: number;
+  piBar: number;
   chi: number;
   uBar: number;
 };
@@ -69,13 +62,11 @@ type SimulationRow = {
   t: number;
   x: TechnologyPath;
   lnYAct: number;
-  wCAct: number;
-  wNAct: number;
-  wAvgAct: number;
+  wageAct: number;
   lnSLAct: number;
-  ell: number[];
-  U: number[];
-  Ut: number;
+  employment: number;
+  unemployment: number;
+  reallocatedJobs: number;
 };
 
 // PAPER: Korinek et al. (2026), Tables 1, A.1 and A.2.
@@ -91,8 +82,6 @@ const FIXED = {
   meanFillingRate: 0.65,
   normalQuitRateAnnual: 0.11,
   responsiveQuitShare: 0.06 / 0.11,
-  wageRigidityAnnual: 0.5,
-  normalSearchDiscount: 0.17,
   start: 2024,
   anchor: 2026.5,
   end: 2030,
@@ -100,7 +89,9 @@ const FIXED = {
 } as const;
 
 // DATA: 2025 CPS occupation-group calibration distributed with Anthropic's explorer.
-const GROUP_WEIGHTS = [0.6235251662150673, 0.3764748337849327];
+// The all-other share calibrates how much worker reallocation the paper's two-group model
+// implies before 2030; the extension no longer treats it as a permanent destination group.
+const ALL_OTHER_EMPLOYMENT_SHARE = 0.3764748337849327;
 const NORMAL_UNEMPLOYMENT = 0.03840656852308217;
 
 // ASSUMPTION: The first long-run implementation can be displayed through 2040.
@@ -117,9 +108,6 @@ const EXTENSION_PRODUCTIVITY_MULTIPLIER_CEILING = {
   value: 30,
   provenance: 'ASSUMPTION',
 } as const;
-
-// DATA: IPUMS-CPS 2010-2019 separation-rate relatives reported by the explorer.
-const SEPARATION_RELATIVES = [0.6890214806466161, 1.5150488573690546];
 
 const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
 const fractionToRate = (fraction: number) => -Math.log(1 - clamp(fraction, 0, 0.999999));
@@ -142,7 +130,7 @@ export const parametersFromScenario = (scenario: AnthropicScenario): EditableSce
   productivityGain: scenario.inputs.productivityGain.value,
   automationShare: scenario.inputs.automationShare.value,
   reinstatementRatio: scenario.inputs.reinstatementRatio.value,
-  searchDiscount: scenario.inputs.searchDiscount.value,
+  reemploymentEffectiveness: scenario.inputs.searchDiscount.value,
   postingSpeed: scenario.inputs.postingSpeed.value,
   productivityAnchor2026: scenario.id === 'modest' ? 0.3 : scenario.id === 'extreme' ? 0.45 : 0.35,
 });
@@ -157,7 +145,7 @@ export const scenarioParameterRanges: Record<keyof EditableScenarioParameters, {
   productivityGain: { min: 0.1, max: 1.5, step: 0.01 },
   automationShare: { min: 0, max: 1, step: 0.01 },
   reinstatementRatio: { min: 0, max: 1, step: 0.01 },
-  searchDiscount: { min: 0.01, max: 1, step: 0.01 },
+  reemploymentEffectiveness: { min: 0.01, max: 1, step: 0.01 },
   postingSpeed: { min: 0.01, max: 1, step: 0.01 },
   productivityAnchor2026: { min: 0.1, max: 1.5, step: 0.01 },
 };
@@ -196,20 +184,9 @@ const productivityAt = (time: number, parameters: EditableScenarioParameters) =>
 
 const technologyAt = (time: number, parameters: EditableScenarioParameters): TechnologyPath => {
   const dSlope = logisticSlope(0.1, parameters.diffusion, 1);
-  const m = affectedTaskMassAt(time, parameters.affectedTaskGrowth);
-  const m2030 = affectedTaskMassAt(FIXED.end, parameters.affectedTaskGrowth);
-  const remainingMass2030 = 1 - m2030;
-  const allocationProgress = clamp((m - m2030) / remainingMass2030, 0, 1);
-  const requiredOtherShare = GROUP_WEIGHTS[1] / remainingMass2030;
-  const allocationShape = requiredOtherShare / (1 - requiredOtherShare);
-  const integratedOtherAllocation = allocationProgress
-    - (1 - Math.pow(1 - allocationProgress, allocationShape + 1)) / (allocationShape + 1);
-  const mN = remainingMass2030 * integratedOtherAllocation;
 
   return {
-    m,
-    mC: m - mN,
-    mN,
+    m: affectedTaskMassAt(time, parameters.affectedTaskGrowth),
     d: logisticAt(time, 0.1, 1, dSlope),
     a: productivityAt(time, parameters),
     psi: parameters.automationShare,
@@ -228,10 +205,7 @@ const closedForm = (
   const laborTaskReduction = tech.d * (
     1 - tech.rho * tech.psi - (1 - tech.psi) * costFactor
   );
-  const laborTaskShares: [number, number] = [
-    GROUP_WEIGHTS[0] - tech.mC * laborTaskReduction,
-    GROUP_WEIGHTS[1] - tech.mN * laborTaskReduction,
-  ];
+  const laborTaskShare = 1 - tech.m * laborTaskReduction;
   const lnSL = Math.log(
     1 - tech.psi * aiMass * (costFactor - tech.rho)
       + Math.expm1(-complementarity * rentalGap) / FIXED.laborShare,
@@ -245,7 +219,7 @@ const closedForm = (
     (1 - FIXED.laborShare * Math.exp(lnSL)) / (1 - FIXED.laborShare),
   ) + lnYL - rentalGap;
 
-  return { lN, lnSL, lnW, lnYL, xr: rentalGap, lnK, laborTaskShares };
+  return { lN, lnSL, lnW, lnYL, xr: rentalGap, lnK, laborTaskShare };
 };
 
 const potentialEconomy = (tech: TechnologyPath, ideasGap: number): PotentialEconomy => {
@@ -265,16 +239,6 @@ const potentialEconomy = (tech: TechnologyPath, ideasGap: number): PotentialEcon
   return closedForm(tech, ideasGap, (low + high) / 2);
 };
 
-const targetsFromTaskShares = (baseEmployment: number[], taskShares: [number, number]) => {
-  const totalEmployment = baseEmployment[0] + baseEmployment[1];
-  const totalTaskShare = taskShares[0] + taskShares[1];
-  return taskShares.map((share) => totalEmployment * share / totalTaskShare);
-};
-
-const weightedMean = (weights: number[], values: number[]) => (
-  weights.reduce((sum, weight, index) => sum + weight * values[index], 0)
-);
-
 const hires = (efficiency: number, search: number, vacancies: number) => {
   if (search <= 0 || vacancies <= 0) return 0;
   return efficiency / Math.pow(
@@ -290,69 +254,26 @@ const fillingRateAtRest = (efficiency: number, hiresPerSearch: number) => {
 };
 
 const steadyState = (): SteadyState => {
-  const employment = GROUP_WEIGHTS.map((weight) => weight * (1 - NORMAL_UNEMPLOYMENT));
-  const baseMonthlyQuit = FIXED.normalQuitRateAnnual / 12;
-  const qXO = SEPARATION_RELATIVES.map((relative) => (
-    (1 - FIXED.responsiveQuitShare) * baseMonthlyQuit * relative
-  ));
-  const qTO = SEPARATION_RELATIVES.map((relative) => (
-    FIXED.responsiveQuitShare * baseMonthlyQuit * relative
-  ));
-  const quitRates = qXO.map((base, index) => fractionToRate(base + qTO[index]));
-  const normalHires = quitRates.map((rate, index) => rate * employment[index]);
-  const mu = [[1, FIXED.normalSearchDiscount], [FIXED.normalSearchDiscount, 1]];
+  const employment = 1 - NORMAL_UNEMPLOYMENT;
+  const quitRate = fractionToRate(FIXED.normalQuitRateAnnual / 12);
+  const normalHires = quitRate * employment;
+  const finding = normalHires / NORMAL_UNEMPLOYMENT;
 
-  const unemployed = [NORMAL_UNEMPLOYMENT / 2, NORMAL_UNEMPLOYMENT / 2];
-  for (let iteration = 0; iteration < 200; iteration += 1) {
-    const share = unemployed[0] / NORMAL_UNEMPLOYMENT;
-    const candidate = [share * NORMAL_UNEMPLOYMENT, (1 - share) * NORMAL_UNEMPLOYMENT];
-    const search = [0, 0];
-    for (let destination = 0; destination < 2; destination += 1) {
-      for (let origin = 0; origin < 2; origin += 1) {
-        search[destination] += mu[origin][destination] * candidate[origin];
-      }
-    }
-    const finding = [0, 0];
-    for (let origin = 0; origin < 2; origin += 1) {
-      for (let destination = 0; destination < 2; destination += 1) {
-        finding[origin] += mu[origin][destination] * normalHires[destination] / search[destination];
-      }
-    }
-    const implied = normalHires.map((flow, index) => flow / finding[index]);
-    const total = implied[0] + implied[1];
-    unemployed[0] = NORMAL_UNEMPLOYMENT * implied[0] / total;
-    unemployed[1] = NORMAL_UNEMPLOYMENT - unemployed[0];
-  }
-
-  const search = [
-    unemployed[0] + FIXED.normalSearchDiscount * unemployed[1],
-    FIXED.normalSearchDiscount * unemployed[0] + unemployed[1],
-  ];
-  const finding = [
-    normalHires[0] / search[0] + FIXED.normalSearchDiscount * normalHires[1] / search[1],
-    FIXED.normalSearchDiscount * normalHires[0] / search[0] + normalHires[1] / search[1],
-  ];
-  const hiresPerSearch = normalHires.map((flow, index) => flow / search[index]);
-
-  let low = Math.max(...hiresPerSearch);
+  let low = finding;
   let high = Math.max(1, low * 2);
-  const meanFill = (efficiency: number) => weightedMean(
-    GROUP_WEIGHTS,
-    hiresPerSearch.map((rate) => fillingRateAtRest(efficiency, rate)),
-  );
-  while (meanFill(high) < FIXED.meanFillingRate && high < 1_000_000) high *= 2;
+  while (fillingRateAtRest(high, finding) < FIXED.meanFillingRate && high < 1_000_000) high *= 2;
   for (let iteration = 0; iteration < 200; iteration += 1) {
     const middle = (low + high) / 2;
-    if (meanFill(middle) >= FIXED.meanFillingRate) high = middle;
+    if (fillingRateAtRest(middle, finding) >= FIXED.meanFillingRate) high = middle;
     else low = middle;
   }
   const chi = Math.min(1, high);
-  const piBar = hiresPerSearch.map((rate) => fillingRateAtRest(chi, rate));
+  const piBar = fillingRateAtRest(chi, finding);
 
   return {
     ell0: employment,
-    UBar: unemployed,
-    fBarO: finding,
+    UBar: NORMAL_UNEMPLOYMENT,
+    fBar: finding,
     piBar,
     chi,
     uBar: NORMAL_UNEMPLOYMENT,
@@ -362,23 +283,18 @@ const steadyState = (): SteadyState => {
 const actualEconomy = (
   potential: PotentialEconomy,
   ideasGap: number,
-  cognitiveShare: number,
-  employment: number[],
-  baseEmployment: number[],
+  employment: number,
+  baseEmployment: number,
 ) => {
   const sigma = FIXED.sigma;
   const complementarity = 1 - sigma;
   const sL = FIXED.laborShare;
   const sK = 1 - sL;
-  const [lambdaC, lambdaN] = potential.laborTaskShares;
-  const otherShare = 1 - cognitiveShare;
+  const lambda = potential.laborTaskShare;
   const capitalBlock = (1 - sL * Math.exp(potential.lnSL)) * Math.exp(-complementarity * potential.xr);
-  const cognitiveEmploymentRatio = employment[0] / baseEmployment[0];
-  const otherEmploymentRatio = employment[1] / baseEmployment[1];
-  const cognitivePrice = (Math.log(lambdaC / cognitiveShare) - Math.log(cognitiveEmploymentRatio)) / sigma;
-  const otherPrice = (Math.log(lambdaN / otherShare) - Math.log(otherEmploymentRatio)) / sigma;
-  const priceBlock = sL * lambdaC * Math.exp(complementarity * (cognitivePrice - ideasGap))
-    + sL * lambdaN * Math.exp(complementarity * (otherPrice - ideasGap));
+  const employmentRatio = employment / baseEmployment;
+  const laborPrice = (Math.log(lambda) - Math.log(employmentRatio)) / sigma;
+  const priceBlock = sL * lambda * Math.exp(complementarity * (laborPrice - ideasGap));
 
   const evaluate = (rentalGap: number) => {
     const laborShare = 1 - capitalBlock * Math.exp(complementarity * rentalGap);
@@ -407,66 +323,20 @@ const actualEconomy = (
   }
   const rentalGap = (low + high) / 2;
   const result = evaluate(rentalGap);
-  const lnWC = result.outputComponent / sigma + cognitivePrice;
-  const lnWN = result.outputComponent / sigma + otherPrice;
+  const lnW = result.outputComponent / sigma + laborPrice;
   return {
-    lnWC,
-    lnWN,
+    lnW,
     lnY: result.lnY,
     lnSL: Math.log(result.laborShare / sL),
   };
 };
 
-const demandGivenCognitiveWage = (
-  potential: PotentialEconomy,
-  ideasGap: number,
-  cognitiveShare: number,
-  cognitiveWage: number,
-  otherEmployment: number,
-  baseEmployment: number[],
-) => {
-  const sigma = FIXED.sigma;
-  const complementarity = 1 - sigma;
-  const sL = FIXED.laborShare;
-  const sK = 1 - sL;
-  const [lambdaC, lambdaN] = potential.laborTaskShares;
-  const otherShare = 1 - cognitiveShare;
-  const capitalBlock = (1 - sL * Math.exp(potential.lnSL)) * Math.exp(-complementarity * potential.xr);
-  const otherPrice = (
-    Math.log(lambdaN / otherShare) - Math.log(otherEmployment / baseEmployment[1])
-  ) / sigma;
-  const cognitiveBlock = sL * lambdaC * Math.exp(complementarity * (cognitiveWage - ideasGap));
-
-  const evaluate = (rentalGap: number) => {
-    const laborShare = 1 - capitalBlock * Math.exp(complementarity * rentalGap);
-    const lnWN = ideasGap + Math.log((laborShare - cognitiveBlock) / (sL * lambdaN)) / complementarity;
-    const outputComponent = sigma * (lnWN - otherPrice);
-    const lnY = outputComponent + complementarity * ideasGap;
-    const ellC = baseEmployment[0] * (lambdaC / cognitiveShare)
-      * Math.exp(-sigma * (cognitiveWage - outputComponent / sigma));
-    return {
-      ellC,
-      lnWN,
-      lnY,
-      lnK: Math.log((1 - laborShare) / sK) + lnY - rentalGap,
-    };
-  };
-
-  let low = -1;
-  let high = 4;
-  let lowValue = evaluate(low).lnK - FIXED.capitalElasticity * low;
-  for (let iteration = 0; iteration < 100; iteration += 1) {
-    const middle = (low + high) / 2;
-    const value = evaluate(middle).lnK - FIXED.capitalElasticity * middle;
-    if ((value > 0) === (lowValue > 0)) {
-      low = middle;
-      lowValue = value;
-    } else {
-      high = middle;
-    }
-  }
-  return evaluate((low + high) / 2).ellC;
-};
+// CALCULATED through 2030 from the paper's other-occupation target (Equations 13 and 15).
+// ASSUMPTION after 2030: tanh keeps cumulative job transitions below the labor force while
+// preserving the paper's first-order reallocation rate when the technology shock is small.
+const reallocatedJobTarget = (potential: PotentialEconomy, baseEmployment: number) => (
+  baseEmployment * Math.tanh(ALL_OTHER_EMPLOYMENT_SHARE * Math.expm1(potential.lN))
+);
 
 const growthGap = (gdpGap: number, ideasGap: number) => {
   const ideasGrowth = FIXED.baselineTfpGrowth / FIXED.laborShare;
@@ -487,23 +357,18 @@ const runMonthlySystem = (
   terminalYear: number,
 ): { rows: SimulationRow[]; ss: SteadyState } => {
   const ss = steadyState();
-  const qBase = SEPARATION_RELATIVES.map((relative) => (
-    (1 - FIXED.responsiveQuitShare) * FIXED.normalQuitRateAnnual / 12 * relative
-  ));
-  const qResponsive = SEPARATION_RELATIVES.map((relative) => (
-    FIXED.responsiveQuitShare * FIXED.normalQuitRateAnnual / 12 * relative
-  ));
-  const wagePersistence = Math.pow(FIXED.wageRigidityAnnual, FIXED.step);
-  const searchMatrix = [[1, parameters.searchDiscount], [parameters.searchDiscount, 1]];
-  const cognitiveShare = GROUP_WEIGHTS[0];
+  const qBase = (1 - FIXED.responsiveQuitShare) * FIXED.normalQuitRateAnnual / 12;
+  const qResponsive = FIXED.responsiveQuitShare * FIXED.normalQuitRateAnnual / 12;
 
-  let employment = ss.ell0.slice();
-  let unemployed = ss.UBar.slice();
-  let priorFinding = ss.fBarO.slice();
-  let stickyWageGap = 0;
+  let employment = ss.ell0;
+  let unemployed = ss.UBar;
+  let priorFinding = ss.fBar;
   let ideasGap = 0;
   const rows: SimulationRow[] = [];
   const months = Math.round((terminalYear - FIXED.start) / FIXED.step);
+  const initialPotential = potentialEconomy(technologyAt(FIXED.start, parameters), ideasGap);
+  const initialReallocatedJobs = reallocatedJobTarget(initialPotential, ss.ell0);
+  let reallocatedJobs = initialReallocatedJobs;
 
   for (let month = 0; month <= months; month += 1) {
     const time = FIXED.start + month * FIXED.step;
@@ -511,94 +376,40 @@ const runMonthlySystem = (
     const nextTech = technologyAt(time + FIXED.step, parameters);
     const potential = potentialEconomy(tech, ideasGap);
     const nextPotential = potentialEconomy(nextTech, ideasGap);
-    const nextTarget = targetsFromTaskShares(ss.ell0, nextPotential.laborTaskShares);
-    const quitRates = qBase.map((base, index) => (
-      fractionToRate(base + qResponsive[index] * priorFinding[index] / ss.fBarO[index])
-    ));
+    const quitRate = fractionToRate(qBase + qResponsive * priorFinding / ss.fBar);
+    const quits = quitRate * employment;
+    const targetReallocation = reallocatedJobTarget(nextPotential, ss.ell0);
+    const transitionGap = smoothPositive(targetReallocation - reallocatedJobs, 1e-8);
+    const jobTransitions = parameters.postingSpeed * transitionGap;
+    const layoffs = jobTransitions;
+    const employmentShortfall = smoothPositive(ss.ell0 - employment);
+    const vacancies = (
+      quits
+      + jobTransitions
+      + parameters.postingSpeed * employmentShortfall
+    ) / ss.piBar;
+    const displacedUnemployment = smoothPositive(unemployed - ss.UBar);
+    const effectiveSearch = unemployed
+      - (1 - parameters.reemploymentEffectiveness) * displacedUnemployment;
+    const newHires = hires(ss.chi, effectiveSearch, vacancies);
+    const findingRate = unemployed > 0 ? newHires / unemployed : 0;
 
-    const attachedCognitive = employment[0] + smoothPositive(unemployed[0] - ss.UBar[0]);
-    const clearing = actualEconomy(
-      potential,
-      ideasGap,
-      cognitiveShare,
-      [attachedCognitive, employment[1]],
-      ss.ell0,
-    );
-    const clearingGap = clearing.lnWC - potential.lnW;
-    stickyWageGap = wagePersistence * stickyWageGap + (1 - wagePersistence) * clearingGap;
-    const cognitiveWage = potential.lnW + stickyWageGap;
-    let cognitiveDemand = demandGivenCognitiveWage(
-      potential,
-      ideasGap,
-      cognitiveShare,
-      cognitiveWage,
-      employment[1],
-      ss.ell0,
-    );
-    if (!Number.isFinite(cognitiveDemand) || cognitiveDemand < 0) cognitiveDemand = employment[0];
-
-    const excessCognitive = smoothPositive(employment[0] - cognitiveDemand);
-    const cognitiveShortfall = smoothPositive(cognitiveDemand - employment[0]);
-    const otherOverhang = smoothPositive(Math.log(employment[1]) - Math.log(nextTarget[1]));
-    const otherShortfall = smoothPositive(Math.log(nextTarget[1]) - Math.log(employment[1]));
-    const cognitiveContraction = parameters.postingSpeed * excessCognitive;
-    const otherContraction = parameters.postingSpeed * otherOverhang;
-    const layoffs = [
-      smoothPositive(cognitiveContraction - quitRates[0] * employment[0]),
-      smoothPositive(otherContraction - quitRates[1]) * employment[1],
-    ];
-    const vacancies = [
-      (smoothPositive(quitRates[0] * employment[0] - cognitiveContraction)
-        + parameters.postingSpeed * cognitiveShortfall) / ss.piBar[0],
-      (smoothPositive(quitRates[1] - otherContraction) + parameters.postingSpeed * otherShortfall)
-        * employment[1] / ss.piBar[1],
-    ];
-
-    const effectiveSearch = [0, 0];
-    for (let destination = 0; destination < 2; destination += 1) {
-      for (let origin = 0; origin < 2; origin += 1) {
-        effectiveSearch[destination] += searchMatrix[origin][destination] * unemployed[origin];
-      }
-    }
-    const hiresByDestination = effectiveSearch.map((search, index) => (
-      hires(ss.chi, search, vacancies[index])
-    ));
-    const findingByOrigin = [0, 0];
-    for (let origin = 0; origin < 2; origin += 1) {
-      for (let destination = 0; destination < 2; destination += 1) {
-        findingByOrigin[origin] += effectiveSearch[destination] > 0
-          ? searchMatrix[origin][destination] * hiresByDestination[destination] / effectiveSearch[destination]
-          : 0;
-      }
-    }
-
-    const actual = actualEconomy(potential, ideasGap, cognitiveShare, employment, ss.ell0);
-    const averageWage = Math.log(
-      (Math.exp(cognitiveWage) * employment[0] + Math.exp(actual.lnWN) * employment[1])
-        / (employment[0] + employment[1]),
-    );
+    const actual = actualEconomy(potential, ideasGap, employment, ss.ell0);
     rows.push({
       t: time,
       x: tech,
       lnYAct: actual.lnY,
-      wCAct: cognitiveWage,
-      wNAct: actual.lnWN,
-      wAvgAct: averageWage,
+      wageAct: actual.lnW,
       lnSLAct: actual.lnSL,
-      ell: employment.slice(),
-      U: unemployed.slice(),
-      Ut: unemployed[0] + unemployed[1],
+      employment,
+      unemployment: unemployed,
+      reallocatedJobs: reallocatedJobs - initialReallocatedJobs,
     });
 
-    const nextEmployment = employment.map((stock, index) => (
-      (1 - quitRates[index]) * stock - layoffs[index] + hiresByDestination[index]
-    ));
-    const nextUnemployed = unemployed.map((stock, index) => (
-      stock + quitRates[index] * employment[index] + layoffs[index] - findingByOrigin[index] * stock
-    ));
-    employment = nextEmployment;
-    unemployed = nextUnemployed;
-    priorFinding = findingByOrigin;
+    employment = (1 - quitRate) * employment - layoffs + newHires;
+    unemployed = unemployed + quits + layoffs - newHires;
+    reallocatedJobs += jobTransitions;
+    priorFinding = findingRate;
     ideasGap += FIXED.step * growthGap(actual.lnY, ideasGap);
   }
 
@@ -626,7 +437,7 @@ export const simulateScenarioPath = (
     productivityGain: clamp(parameters.productivityGain, 0, 1.5),
     automationShare: clamp(parameters.automationShare, 0, 1),
     reinstatementRatio: clamp(parameters.reinstatementRatio, 0, 1),
-    searchDiscount: clamp(parameters.searchDiscount, 0.01, 1),
+    reemploymentEffectiveness: clamp(parameters.reemploymentEffectiveness, 0.01, 1),
     postingSpeed: clamp(parameters.postingSpeed, 0.01, 1),
     productivityAnchor2026: clamp(parameters.productivityAnchor2026, 0, 1.5),
   };
@@ -648,21 +459,16 @@ export const simulateScenarioPath = (
         ? String(Math.round(row.t))
         : `${Math.floor(row.t)}-${String(Math.round((row.t % 1) * 12) + 1).padStart(2, '0')}`,
       affectedTaskMass: row.x.m * 100,
-      cognitiveAffectedTaskMass: row.x.mC * 100,
-      otherAffectedTaskMass: row.x.mN * 100,
       diffusion: row.x.d * 100,
       productivityGain: row.x.a,
       aiTaskShare: row.x.m * row.x.d * 100,
+      reallocatedJobShare: 100 * row.reallocatedJobs / (1 - NORMAL_UNEMPLOYMENT),
       gdpGap: percentGap(row.lnYAct),
       gdpGrowth: 2 + 100 * annualGapChange,
-      averageWageGap: percentGap(row.wAvgAct),
-      cognitiveWageGap: percentGap(row.wCAct),
-      otherWageGap: percentGap(row.wNAct),
+      averageWageGap: percentGap(row.wageAct),
       laborShare: 100 * FIXED.laborShare * Math.exp(row.lnSLAct),
       capitalShare: 100 * (1 - FIXED.laborShare * Math.exp(row.lnSLAct)),
-      totalUnemployment: row.Ut * 100,
-      cognitiveUnemployment: 100 * row.U[0] / (row.U[0] + row.ell[0]),
-      otherUnemployment: 100 * row.U[1] / (row.U[1] + row.ell[1]),
+      totalUnemployment: row.unemployment * 100,
     };
   });
 };

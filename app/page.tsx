@@ -41,8 +41,6 @@ type MetricSeries = {
 const metricSeries: Record<MetricId, MetricSeries[]> = {
   unemployment: [
     { key: 'totalUnemployment', label: 'All workers', color: '#c85b2f' },
-    { key: 'cognitiveUnemployment', label: 'Cognitive workers', color: '#793f31' },
-    { key: 'otherUnemployment', label: 'All other workers', color: '#397765' },
   ],
   gdp: [
     { key: 'gdpGap', label: 'GDP above no-AI path', color: '#397765' },
@@ -50,8 +48,6 @@ const metricSeries: Record<MetricId, MetricSeries[]> = {
   ],
   wages: [
     { key: 'averageWageGap', label: 'Average wage', color: '#1d211e' },
-    { key: 'cognitiveWageGap', label: 'Cognitive wage', color: '#c85b2f' },
-    { key: 'otherWageGap', label: 'All other wage', color: '#397765' },
   ],
   shares: [
     { key: 'laborShare', label: 'Labor share', color: '#397765' },
@@ -59,9 +55,8 @@ const metricSeries: Record<MetricId, MetricSeries[]> = {
   ],
   exposure: [
     { key: 'affectedTaskMass', label: 'All affected tasks', color: '#1d211e' },
-    { key: 'cognitiveAffectedTaskMass', label: 'Cognitive tasks', color: '#793f31' },
-    { key: 'otherAffectedTaskMass', label: 'Other tasks', color: '#c85b2f' },
     { key: 'aiTaskShare', label: 'Task instances using technology', color: '#397765' },
+    { key: 'reallocatedJobShare', label: 'Jobs that have transitioned', color: '#c85b2f' },
   ],
 };
 
@@ -131,20 +126,20 @@ const parameterControls: Array<{
     example: (value) => `At ${value.toFixed(2)}, automating 100 task units creates ${Math.round(value * 100)} new task units for people.`,
   },
   {
-    key: 'searchDiscount',
-    label: 'How hard is it to switch careers?',
-    term: 'Cross-occupation search discount',
-    description: 'How effective a displaced worker’s job search is outside their previous occupation group, compared with searching within it.',
+    key: 'reemploymentEffectiveness',
+    label: 'How easily do displaced workers find new work?',
+    term: 'Displaced-worker search effectiveness',
+    description: 'How effective job search is for workers displaced by technology, relative to workers changing jobs in normal times.',
     format: (value) => value.toFixed(2),
-    example: (value) => `At ${value.toFixed(2)}, an outside-field search is modeled as ${Math.round(value * 100)}% as effective as an in-field search.`,
+    example: (value) => `At ${value.toFixed(2)}, a displaced worker’s search is modeled as ${Math.round(value * 100)}% as effective as a normal job search.`,
   },
   {
     key: 'postingSpeed',
-    label: 'How quickly does employment adjust?',
-    term: 'Monthly job adjustment speed',
-    description: 'The share of the gap between employment and modeled labor demand that is added or removed each month.',
+    label: 'How quickly do jobs transition?',
+    term: 'Monthly job transition speed',
+    description: 'The share of the gap between completed job transitions and the model’s transition target that occurs each month.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
-    example: (value) => `At ${Math.round(value * 100)}%, employment closes ${Math.round(value * 100)} of every 100 missing or excess jobs each month.`,
+    example: (value) => `At ${Math.round(value * 100)}%, ${Math.round(value * 100)} of every 100 pending job transitions occur each month.`,
   },
 ];
 
@@ -322,7 +317,7 @@ export default function Home() {
             <small>Normal-times calibration: {pct(NORMAL_UNEMPLOYMENT_RATE)}</small>
           </article>
           <article><span>GDP VS. NO-AI PATH</span><strong>{signedPct(final.gdpGap)}</strong><small>{pct(final.gdpGrowth)} annual growth in {terminalYear}</small></article>
-          <article><span>COGNITIVE UNEMPLOYMENT</span><strong>{pct(final.cognitiveUnemployment)}</strong><small>{pct(final.otherUnemployment)} among all other workers</small></article>
+          <article><span>JOBS THAT HAVE TRANSITIONED</span><strong>{pct(final.reallocatedJobShare)}</strong><small>Cumulative jobs replaced or reorganized since 2024</small></article>
           <article><span>LABOR SHARE OF INCOME</span><strong>{pct(final.laborShare)}</strong><small>Capital receives {pct(final.capitalShare)}</small></article>
         </section>
       </section>
@@ -418,8 +413,8 @@ export default function Home() {
           </div>
           <div className="wage-list">
             <span><small>AVERAGE WAGE VS. NO-AI</small><strong>{signedPct(final.averageWageGap)}</strong></span>
-            <span><small>COGNITIVE WAGE VS. NO-AI</small><strong>{signedPct(final.cognitiveWageGap)}</strong></span>
-            <span><small>OTHER-OCCUPATION WAGE VS. NO-AI</small><strong>{signedPct(final.otherWageGap)}</strong></span>
+            <span><small>AFFECTED TASK MASS</small><strong>{pct(final.affectedTaskMass)}</strong></span>
+            <span><small>JOBS THAT HAVE TRANSITIONED</small><strong>{pct(final.reallocatedJobShare)}</strong></span>
           </div>
         </article>
       </section>
@@ -428,8 +423,8 @@ export default function Home() {
         <div><p className="eyebrow">POST-2030 EXTENSION</p><h2>What changes after 2030.</h2></div>
         <div className="boundary-copy">
           <p>Affected task mass follows one logistic path from its 14% mid-2026 anchor toward a 100% ceiling. The growth-rate control replaces the old hard 2030 task-mass endpoint. The published presets map to rates that still reach 20%, 30%, and 50% in 2030.</p>
-          <p>Through 2030, affected tasks remain within cognitive occupations. After 2030, each additional affected task is allocated smoothly across the work that remains, including tasks outside cognitive occupations. Neither group loses affected tasks as the frontier expands.</p>
-          <p>Diffusion continues on its existing logistic path. Task productivity preserves its 2030 level and growth rate, then gradually approaches an assumed 30x task-output ceiling. Employment moves partway toward labor demand each month through the selected adjustment speed.</p>
+          <p>The labor market is modeled as one pool because the old cognitive and all-other split requires the second group to remain permanently unexposed. As technology reaches more tasks, jobs transition out of their old form and replacement roles are posted across the economy.</p>
+          <p>Diffusion continues on its existing logistic path. Task productivity preserves its 2030 level and growth rate, then gradually approaches an assumed 30x task-output ceiling. Each completed transition ends an old role and posts a replacement role; displaced workers pass through the matching process before re-employment.</p>
           <strong>Results after 2030 extend the framework under these assumptions and are not values reported by the original authors.</strong>
         </div>
       </section>

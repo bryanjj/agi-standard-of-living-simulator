@@ -2,7 +2,9 @@
 
 ## Scope
 
-The model runs on a monthly grid from mid-2026 through a user-selected terminal year from 2030 to 2040. It adapts the framework in Korinek et al. (2026), then adds explicit assumptions for a technology frontier that can expand beyond cognitive tasks.
+The model runs on a monthly grid from 2026 through a user-selected terminal year from 2030 to 2040. It preserves the production, capital, ideas, and matching blocks in Korinek et al. (2026), then adds explicit assumptions for a technology frontier that can expand beyond cognitive tasks.
+
+The post-2030 labor market uses one economy-wide worker pool. This is necessary because the paper's two-group target is derived from the assumption that the second group is never directly affected by AI. Once AI or robotics can reach those tasks, that group can no longer serve as a permanent destination for displaced workers.
 
 ## Monthly implementation
 
@@ -12,19 +14,19 @@ The model runs on a monthly grid from mid-2026 through a user-selected terminal 
 
 This gives 4% in the modest scenario, 12% in the substantial scenario, and 30% in the extreme scenario at the 2030 checkpoint.
 
-`model/anthropicSimulation.ts` implements the monthly recursion. It begins from the calibrated 2024 steady state and evaluates the technology, production, capital, wage, job-flow, matching, and ideas equations each month. Monthly chart values are model solutions rather than interpolation.
+`model/anthropicSimulation.ts` implements the monthly recursion. It begins from the calibrated 2024 steady state and evaluates the technology, production, capital, job-transition, matching, and ideas equations each month. Monthly chart values are model solutions rather than interpolation.
 
-The monthly sequence follows the paper:
+The monthly sequence is:
 
-1. Logistic paths for affected task mass and diffusion, plus a smooth scenario path for productivity gain.
-2. The exact closed-form production block and the capital-market root.
-3. Wages, labor and capital shares, and occupation-group employment targets.
-4. Cognitive wage rigidity, labor demand, quits, and displacement layoffs.
-5. Vacancy posting, effective search, matching, hiring, and occupation switching.
-6. Monthly employment and unemployment stocks.
-7. GDP reporting and the ideas-stock update.
+1. Evaluate logistic paths for affected task mass and diffusion, plus the smooth productivity path.
+2. Solve the paper's exact task-production block and capital-market root.
+3. Convert the change in human task demand into a cumulative share of jobs that must transition.
+4. Move a fraction of the remaining job-transition gap each month.
+5. Post replacement roles and ordinary replacement vacancies into one labor market.
+6. Match unemployed workers to vacancies with the paper's bounded CES matching function.
+7. Update employment, unemployment, GDP, wages, factor shares, and the ideas stock.
 
-The preset inputs still reach the published affected-task masses in 2030. Economic outcomes remain close to the published scenarios, but they are not exact replications because the affected-task path and symmetric job-adjustment rule differ.
+The preset inputs still reach the published affected-task masses in 2030. The economic outcomes are no longer intended to replicate the paper's group-specific unemployment results because the post-2030 extension removes the permanent unexposed occupation group on which those results depend.
 
 ## Editable scenarios
 
@@ -35,8 +37,8 @@ The three presets can be used as starting points. Editing any control creates a 
 - log productivity gain in mid-2026 and 2030;
 - automation share;
 - reinstatement ratio;
-- cross-occupation search discount; and
-- monthly job-adjustment speed.
+- displaced-worker search effectiveness; and
+- monthly job-transition speed.
 
 Affected task mass begins at 14% in mid-2026 and follows a 100%-ceiling logistic. If `r` is the annual expansion rate and `m0 = 0.14`, then:
 
@@ -46,16 +48,24 @@ Affected task mass begins at 14% in mid-2026 and follows a 100%-ceiling logistic
 
 The preset rates are calculated so affected task mass reaches 20%, 30%, and 50% in 2030. The substantial rate is approximately 27.7% per year and implies approximately 87.2% affected task mass in 2040.
 
-## Exposure across occupation groups
+## One-pool labor transition
 
-Affected tasks stay within the cognitive group through 2030. After 2030, new exposure is allocated cumulatively across remaining tasks so neither group ever loses affected task mass. Let `m30` be total affected mass in 2030, `R = 1 - m30`, `N` be the initially non-cognitive task share, `q = N / R`, `k = q / (1 - q)`, and `u = clamp[(m - m30) / R, 0, 1]`. Non-cognitive affected mass is:
+Equation (15) in the paper gives `lN`, the log increase in jobs outside the affected occupation group needed to absorb released workers. Before 2030, the implied number of workers changing jobs is approximately:
 
-`mN = R × {u - [1 - (1 - u)^(k + 1)] / (k + 1)}`
+`other-group employment × [exp(lN) - 1]`
 
-Cognitive affected mass is `mC = m - mN`. The marginal allocation to non-cognitive tasks begins at zero, rises smoothly, and reaches the amount required for `mC + mN` to approach 100% without exceeding either group’s task mass.
+The extension keeps that local behavior but removes the permanent group boundary. Let `sN = 0.37647` be the paper's 2025 all-other employment share and `E0` normal-times employment. The cumulative job-transition target is:
+
+`J*(t) = E0 × tanh{sN × [exp(lN(t)) - 1]}`
+
+The hyperbolic tangent is an extension assumption. It is smooth, agrees with the paper's expression to first order for small shocks, and limits cumulative transitions to the number of employed workers as affected task mass approaches 100%.
+
+Each month, employers complete the selected adjustment-speed fraction of `J*(t+1) - J(t)`. These transitions are worker displacement events: the old role ends and a replacement role is posted. Ordinary quits and replacement vacancies continue alongside them.
+
+There is one unemployment stock and one vacancy market. The matching function is the bounded CES form from Equation (34) of the paper. The former cross-occupation search parameter is reinterpreted as displaced-worker search effectiveness. Normal unemployment supplies one unit of search per worker; unemployment above the normal pool supplies the selected fraction. This retains the paper's idea that displaced workers may search less effectively because their previous skills or occupation no longer match available work, without assigning them to a permanent origin group.
 
 ## Other extension assumptions
 
 Diffusion continues along the logistic calibrated to its 2026 anchor and 2030 setting. Automation and reinstatement shares remain constant. Task productivity follows its linear path through 2030, then matches its 2030 level and slope while approaching an assumed 30x task-output ceiling.
 
-The production block tracks remaining labor-task mass separately for both occupation groups. Employment gaps close at the selected monthly adjustment speed. A smooth positive-part function replaces hard layoff and vacancy thresholds, and the matching function is expressed in its differentiable CES form. Workers can continue searching across groups through the existing search matrix.
+A smooth positive-part function is used for job-transition gaps and excess unemployment. The technology, production, reallocation, vacancy, and matching rules therefore change continuously without a special switch at 2030.

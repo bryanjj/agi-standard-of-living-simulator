@@ -10,11 +10,11 @@ The interface adapts the monthly equation system through a user-selected termina
 
 The modest, substantial, and extreme inputs remain available as starting points. Their task-mass settings map to logistic rates that reach 20%, 30%, and 50% in 2030. Because the task-capability path and job-adjustment rule have changed, economic results remain comparable to the published scenarios but are not exact replications.
 
-Numeric scenario values and provenance metadata live in `model/anthropic.ts`. The monthly production, capital, wage, job-flow, matching, and ideas equations live in `model/anthropicSimulation.ts`.
+Numeric scenario values and provenance metadata live in `model/anthropic.ts`. The monthly production, capital, wage, job-transition, matching, and ideas equations live in `model/anthropicSimulation.ts`.
 
 ## Post-2030 extension
 
-Through 2030, affected tasks remain within cognitive occupations. After 2030, additional exposure is allocated monotonically across the cognitive and non-cognitive tasks that remain. Diffusion continues logistically, task productivity approaches an assumed 30x ceiling, and employment adjusts gradually toward labor demand. These are documented extension assumptions, not results from the original authors.
+The extension uses one economy-wide labor pool instead of preserving a permanently unexposed occupation group. As technology reaches more tasks, a smooth and bounded rule derived locally from the paper's reallocation equation determines how many existing jobs must transition. Replacement roles enter the paper's bounded matching process, so unemployment reflects the speed of transition and the difficulty displaced workers have finding new work. Diffusion continues logistically and task productivity approaches an assumed 30x ceiling. These are documented extension assumptions, not results from the original authors.
 
 See [MODEL.md](MODEL.md), [SOURCES.md](SOURCES.md), and [LIMITATIONS.md](LIMITATIONS.md).
 
