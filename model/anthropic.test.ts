@@ -84,13 +84,13 @@ describe('Anthropic scenario calibration', () => {
     expect(through2040.slice(0, through2030.length)).toEqual(through2030);
   });
 
-  it('indexes GDP and real wages to 100 in January 2026', () => {
+  it('anchors GDP and real wages to observed 2026 dollar levels', () => {
     const path = simulateScenarioPath(
       parametersFromScenario(anthropicScenarioById.substantial),
       { terminalYear: 2040 },
     );
-    expect(path[0].gdpIndex).toBeCloseTo(100, 10);
-    expect(path[0].averageWageIndex).toBeCloseTo(100, 10);
+    expect(path[0].realGdpTrillions).toBeCloseTo(32.486066, 10);
+    expect(path[0].realAnnualWage).toBeCloseTo(1289.34 * 52, 10);
   });
 
   it('freezes technology after the mid-2026 anchor while ordinary economics continue', () => {
@@ -105,8 +105,8 @@ describe('Anthropic scenario calibration', () => {
       expect(point.diffusion).toBeCloseTo(baseline[anchorIndex].diffusion, 10);
       expect(point.productivityGain).toBeCloseTo(baseline[anchorIndex].productivityGain, 10);
     }
-    expect(baseline.at(-1)!.gdpIndex).toBeGreaterThan(baseline[0].gdpIndex);
-    expect(baseline.at(-1)!.averageWageIndex).toBeGreaterThan(baseline[0].averageWageIndex);
+    expect(baseline.at(-1)!.realGdpTrillions).toBeGreaterThan(baseline[0].realGdpTrillions);
+    expect(baseline.at(-1)!.realAnnualWage).toBeGreaterThan(baseline[0].realAnnualWage);
   });
 
   it.each(anthropicScenarios)('keeps the $name exposure and eliminated-job paths monotone and bounded', (scenario) => {

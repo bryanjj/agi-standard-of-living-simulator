@@ -72,7 +72,7 @@ There is one unemployment stock and one vacancy market. Total unemployment combi
 
 GDP, real wages, and unemployment are shown against a second run of the same model. The comparison follows the selected scenario through the mid-2026 technology anchor, then holds affected task mass, diffusion, and AI task productivity fixed at those levels. Automation and reinstatement shares are already constant scenario parameters. Ordinary TFP, labor-force, ideas, capital, quit, vacancy, and matching dynamics continue.
 
-Both GDP and real wages are displayed as indexes equal to 100 in January 2026. Their common trend growth is calculated from the paper's baseline calibration: real wages grow with labor-augmenting ideas at `baseline TFP growth / labor share`, and GDP also includes labor-force growth. The selected scenario and frozen-2026 comparison therefore show levels on the same scale rather than percentage gaps from a hypothetical economy with no AI.
+GDP and real wages are displayed in constant 2026 dollars. The GDP path is anchored to the BEA's 2026 Q2 seasonally adjusted annual rate of $32.486 trillion. The wage path is anchored to the BLS June 2026 average weekly earnings of $1,289.34 for private nonfarm payroll workers, annualized to $67,045.68. Their common trend growth is calculated from the paper's baseline calibration: real wages grow with labor-augmenting ideas at `baseline TFP growth / labor share`, and GDP also includes labor-force growth. These anchors change the units, not the relative shape or scenario comparison.
 
 ## Other extension assumptions
 

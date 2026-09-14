@@ -6,7 +6,7 @@ An independent open-source reconstruction of the economic framework in Anton Kor
 
 ## Current milestone
 
-The interface adapts the monthly equation system through a user-selected terminal year from 2030 to 2040. A single affected-task expansion rate grows technology capability logistically from a 14% mid-2026 anchor toward 100%. Users can view unemployment, GDP, wages, factor-income shares, and technology exposure over time. GDP, real wages, and unemployment include a comparison path that freezes further technology growth after the mid-2026 anchor while ordinary economic growth continues.
+The interface adapts the monthly equation system through a user-selected terminal year from 2030 to 2040. A single affected-task expansion rate grows technology capability logistically from a 14% mid-2026 anchor toward 100%. Users can view unemployment, GDP, wages, factor-income shares, and technology exposure over time. GDP and wages are shown in constant 2026 dollars, while unemployment remains a percentage. Each includes a comparison path that freezes further technology growth after the mid-2026 anchor while ordinary economic growth continues.
 
 The modest, substantial, and extreme inputs remain available as starting points. Their task-mass settings map to logistic rates that reach 20%, 30%, and 50% in 2030. Because the task-capability path and job-adjustment rule have changed, economic results remain comparable to the published scenarios but are not exact replications.
 

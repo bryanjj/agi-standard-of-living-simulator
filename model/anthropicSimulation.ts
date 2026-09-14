@@ -25,10 +25,10 @@ export type ScenarioPathPoint = {
   aiTaskShare: number;
   eliminatedJobShare: number;
   gdpGap: number;
-  gdpIndex: number;
+  realGdpTrillions: number;
   gdpGrowth: number;
   averageWageGap: number;
-  averageWageIndex: number;
+  realAnnualWage: number;
   laborShare: number;
   capitalShare: number;
   totalUnemployment: number;
@@ -92,6 +92,15 @@ const FIXED = {
 } as const;
 
 const NORMAL_UNEMPLOYMENT = 0.03840656852308217;
+
+// DATA: BEA, NIPA account A191RC, 2026 Q2, seasonally adjusted annual rate.
+// The current-dollar level is used only to express the model's real GDP path in 2026 dollars.
+export const REAL_GDP_2026_TRILLIONS = 32.486066;
+
+// DATA: BLS CES series CES0500000011, June 2026, seasonally adjusted.
+export const AVERAGE_WEEKLY_EARNINGS_2026 = 1289.34;
+// CALCULATED: 52 weeks × the June 2026 average weekly earnings observation.
+export const REAL_ANNUAL_WAGE_2026 = AVERAGE_WEEKLY_EARNINGS_2026 * 52;
 
 // ASSUMPTION: The first long-run implementation can be displayed through 2040.
 export const TERMINAL_YEAR_RANGE = {
@@ -496,9 +505,9 @@ export const simulateScenarioPath = (
     ? undefined
     : clamp(options.freezeTechnologyAfter, FIXED.start, terminalYear);
   const { rows } = runMonthlySystem(safe, terminalYear, freezeTechnologyAfter);
-  const indexYear = 2026;
-  const indexLnY = interpolateRow(rows, indexYear, (row) => row.lnYAct);
-  const indexLnW = interpolateRow(rows, indexYear, (row) => row.wageAct);
+  const referenceYear = 2026;
+  const referenceLnY = interpolateRow(rows, referenceYear, (row) => row.lnYAct);
+  const referenceLnW = interpolateRow(rows, referenceYear, (row) => row.wageAct);
   // CALCULATED from the paper's no-shock TFP and labor-force growth calibration.
   const baselineWageGrowth = FIXED.baselineTfpGrowth / FIXED.laborShare;
   const baselineGdpGrowth = baselineWageGrowth + FIXED.laborForceGrowth;
@@ -519,13 +528,13 @@ export const simulateScenarioPath = (
       aiTaskShare: row.x.m * row.x.d * 100,
       eliminatedJobShare: 100 * (1 - row.employmentTarget / (1 - NORMAL_UNEMPLOYMENT)),
       gdpGap: percentGap(row.lnYAct),
-      gdpIndex: 100 * Math.exp(
-        baselineGdpGrowth * (row.t - indexYear) + row.lnYAct - indexLnY
+      realGdpTrillions: REAL_GDP_2026_TRILLIONS * Math.exp(
+        baselineGdpGrowth * (row.t - referenceYear) + row.lnYAct - referenceLnY
       ),
       gdpGrowth: 100 * (baselineGdpGrowth + annualGapChange),
       averageWageGap: percentGap(row.wageAct),
-      averageWageIndex: 100 * Math.exp(
-        baselineWageGrowth * (row.t - indexYear) + row.wageAct - indexLnW
+      realAnnualWage: REAL_ANNUAL_WAGE_2026 * Math.exp(
+        baselineWageGrowth * (row.t - referenceYear) + row.wageAct - referenceLnW
       ),
       laborShare: 100 * FIXED.laborShare * Math.exp(row.lnSLAct),
       capitalShare: 100 * (1 - FIXED.laborShare * Math.exp(row.lnSLAct)),
