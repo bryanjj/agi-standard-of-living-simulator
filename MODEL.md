@@ -76,6 +76,6 @@ GDP and real wages are displayed in constant 2026 dollars. The GDP path is ancho
 
 ## Other extension assumptions
 
-Diffusion continues along the logistic calibrated to its 2026 anchor and 2030 setting. Automation and reinstatement shares remain constant. Task productivity follows its linear path through 2030, then matches its 2030 level and slope while approaching an assumed 30x task-output ceiling.
+Diffusion continues along the logistic calibrated to its 2026 anchor and 2030 setting. Automation and reinstatement shares remain constant. After 2030, task productivity continues at the same scenario-specific linear log growth rate used through 2030. At 2040, this gives task-output multipliers of approximately 1.35x in the modest scenario, 2.09x in the substantial scenario, and 6.05x in the extreme scenario. Anthropic does not specify this post-2030 continuation.
 
 A smooth positive-part function is used for employment gaps and excess unemployment. The technology, production, employment-target, vacancy, and matching rules therefore change continuously without a special switch at 2030.

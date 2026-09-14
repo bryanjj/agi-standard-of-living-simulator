@@ -84,6 +84,30 @@ describe('Anthropic scenario calibration', () => {
     expect(through2040.slice(0, through2030.length)).toEqual(through2030);
   });
 
+  it.each([
+    ['modest', 0.3, Math.exp(0.3)],
+    ['substantial', 0.7357142857142858, Math.exp(0.7357142857142858)],
+    ['extreme', 1.8, Math.exp(1.8)],
+  ] as const)('continues the %s log-productivity trend through 2040', (scenarioId, logGain, multiplier) => {
+    const path = simulateScenarioPath(
+      parametersFromScenario(anthropicScenarioById[scenarioId]),
+      { terminalYear: 2040 },
+    );
+    const final = path.at(-1)!;
+    expect(final.productivityGain).toBeCloseTo(logGain, 10);
+    expect(Math.exp(final.productivityGain)).toBeCloseTo(multiplier, 10);
+  });
+
+  it.each(anthropicScenarios)('keeps the $name log-productivity slope smooth at 2030', (scenario) => {
+    const path = simulateScenarioPath(parametersFromScenario(scenario), { terminalYear: 2040 });
+    const checkpointIndex = path.findIndex((point) => Math.abs(point.date - 2030) < 1e-8);
+    const slopeBefore = path[checkpointIndex].productivityGain
+      - path[checkpointIndex - 1].productivityGain;
+    const slopeAfter = path[checkpointIndex + 1].productivityGain
+      - path[checkpointIndex].productivityGain;
+    expect(slopeAfter).toBeCloseTo(slopeBefore, 10);
+  });
+
   it('anchors GDP and real wages to observed 2026 dollar levels', () => {
     const path = simulateScenarioPath(
       parametersFromScenario(anthropicScenarioById.substantial),

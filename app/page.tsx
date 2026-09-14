@@ -424,7 +424,7 @@ export default function Home() {
           <p className="extension-intro">Anthropic&apos;s scenarios end in 2030. From 2030 to 2040, this simulator continues the same framework with four explicit choices.</p>
           <ol className="extension-list">
             <li><b>Affected task mass keeps growing.</b><span>The selected annual expansion rate carries task capability toward a maximum of 100%.</span></li>
-            <li><b>Diffusion and task productivity continue smoothly.</b><span>Diffusion stays on its existing path. Productivity keeps its 2030 direction, then gradually approaches an assumed 30x task-output ceiling.</span></li>
+            <li><b>Diffusion and task productivity continue smoothly.</b><span>Diffusion stays on its existing path. After 2030, task productivity continues at the same scenario-specific log growth rate used through 2030.</span></li>
             <li><b>Workers share one labor market.</b><span>Job capacity falls only when affected tasks are used, automated, and not offset by reinstatement. Automating a role does not automatically create a replacement opening.</span></li>
             <li><b>The comparison freezes technology in mid-2026.</b><span>The dashed line holds task capability, diffusion, and AI task productivity fixed while ordinary economic growth continues.</span></li>
           </ol>

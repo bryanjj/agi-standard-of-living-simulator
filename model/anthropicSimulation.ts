@@ -108,12 +108,6 @@ export const MODEL_TERMINAL_YEAR = {
   provenance: 'ASSUMPTION',
 } as const;
 
-// ASSUMPTION: The productivity path approaches a finite task-output ceiling after 2030.
-const EXTENSION_PRODUCTIVITY_MULTIPLIER_CEILING = {
-  value: 30,
-  provenance: 'ASSUMPTION',
-} as const;
-
 const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
 const fractionToRate = (fraction: number) => -Math.log(1 - clamp(fraction, 0, 0.999999));
 const logit = (value: number) => Math.log(value / (1 - value));
@@ -171,20 +165,9 @@ const logisticAt = (time: number, anchor: number, ceiling: number, slope: number
 };
 
 const productivityAt = (time: number, parameters: EditableScenarioParameters) => {
+  // ASSUMPTION after 2030: continue the paper's linear log-productivity path through 2040.
   const slope = (parameters.productivityGain - parameters.productivityAnchor2026) / (FIXED.end - FIXED.anchor);
-  const linear = parameters.productivityAnchor2026 + slope * (time - FIXED.anchor);
-  const ceiling = Math.log(EXTENSION_PRODUCTIVITY_MULTIPLIER_CEILING.value);
-  if (time <= FIXED.end) return clamp(linear, 0, ceiling);
-  if (Math.abs(slope) < 1e-12) return clamp(parameters.productivityGain, 0, ceiling);
-
-  const yearsAfter2030 = time - FIXED.end;
-  if (slope > 0) {
-    const remaining = ceiling - parameters.productivityGain;
-    if (remaining <= 1e-12) return ceiling;
-    return ceiling - remaining * Math.exp(-slope * yearsAfter2030 / remaining);
-  }
-  if (parameters.productivityGain <= 1e-12) return 0;
-  return parameters.productivityGain * Math.exp(slope * yearsAfter2030 / parameters.productivityGain);
+  return parameters.productivityAnchor2026 + slope * (time - FIXED.anchor);
 };
 
 const technologyAt = (time: number, parameters: EditableScenarioParameters): TechnologyPath => {
