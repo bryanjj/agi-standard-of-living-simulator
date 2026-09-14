@@ -257,6 +257,12 @@ export default function Home() {
           <p className="eyebrow">ECONOMIC SCENARIOS FOR TRANSFORMATIVE AI</p>
           <h1>How could AI reshape<br /><em>growth, wages, and jobs?</em></h1>
           <p className="lede">Build a scenario from the published assumptions, then follow a smooth technology and economic path through {terminalYear}.</p>
+          <aside className="source-note">
+            <p>
+              Based on Anthropic Institute&apos;s <a href="https://www.anthropic.com/institute/econ-scenarios" target="_blank" rel="noreferrer">Economic Scenarios for Transformative AI</a>, which models 2026 through 2030. This independent simulator extends the framework through 2040.
+            </p>
+            <a href="#boundary">See the post-2030 assumptions ↓</a>
+          </aside>
         </div>
 
         <div className="horizon" aria-label={`Model horizon ${MODEL_START_YEAR} to ${terminalYear}`}>
@@ -413,14 +419,17 @@ export default function Home() {
       </section>
 
       <section className="boundary-section" id="boundary">
-        <div><p className="eyebrow">POST-2030 EXTENSION</p><h2>What changes after 2030.</h2></div>
+        <div><p className="eyebrow">2040 EXTENSION</p><h2>How the model continues after 2030.</h2></div>
         <div className="boundary-copy">
-          <p>Affected task mass follows one logistic path from its 14% mid-2026 anchor toward a 100% ceiling. The growth-rate control replaces the old hard 2030 task-mass endpoint. The published presets map to rates that still reach 20%, 30%, and 50% in 2030.</p>
-          <p>The labor market is modeled as one pool because the old cognitive and all-other split requires the second group to remain permanently unexposed. Human job capacity is calculated directly from the share of tasks that are affected, adopted, automated, and not offset by new human tasks.</p>
-          <p>Diffusion continues on its existing logistic path. Task productivity preserves its 2030 level and growth rate, then gradually approaches an assumed 30x task-output ceiling. An automated role no longer creates a replacement opening automatically. Ordinary quits are replaced only when that human job remains in the task-based employment target.</p>
-          <p>The 2026 technology baseline follows the selected scenario through its mid-2026 anchor, then holds task capability, adoption, and AI task productivity fixed. Ordinary productivity, labor-force, and capital growth continue.</p>
-          <p>Dollar levels use 2026 reference values: {gdpValue(REAL_GDP_2026_TRILLIONS)} of annualized U.S. GDP and {wageValue(REAL_ANNUAL_WAGE_2026)} of annual earnings for the average private-sector payroll worker. Future values are expressed in constant 2026 dollars.</p>
-          <strong>Results after 2030 extend the framework under these assumptions and are not values reported by the original authors.</strong>
+          <p className="extension-intro">Anthropic&apos;s scenarios end in 2030. From 2030 to 2040, this simulator continues the same framework with four explicit choices.</p>
+          <ol className="extension-list">
+            <li><b>Affected task mass keeps growing.</b><span>The selected annual expansion rate carries task capability toward a maximum of 100%.</span></li>
+            <li><b>Diffusion and task productivity continue smoothly.</b><span>Diffusion stays on its existing path. Productivity keeps its 2030 direction, then gradually approaches an assumed 30x task-output ceiling.</span></li>
+            <li><b>Workers share one labor market.</b><span>Job capacity falls only when affected tasks are used, automated, and not offset by reinstatement. Automating a role does not automatically create a replacement opening.</span></li>
+            <li><b>The comparison freezes technology in mid-2026.</b><span>The dashed line holds task capability, diffusion, and AI task productivity fixed while ordinary economic growth continues.</span></li>
+          </ol>
+          <p className="measurement-note">Dollar values use 2026 reference levels: {gdpValue(REAL_GDP_2026_TRILLIONS)} of annualized U.S. GDP and {wageValue(REAL_ANNUAL_WAGE_2026)} of annual earnings for the average private-sector payroll worker.</p>
+          <strong>Values after 2030 are results of this extension, not values reported by Anthropic.</strong>
         </div>
       </section>
 
