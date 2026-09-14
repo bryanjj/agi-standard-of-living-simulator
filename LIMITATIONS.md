@@ -5,11 +5,11 @@
 - **Post-2030 extension.** Results after 2030 rely on independent assumptions and are not values reported by the original authors.
 - **Unified technology frontier.** One affected-task path combines advances in software AI and robotics. It does not separately calibrate their speed, diffusion, productivity, or capital requirements.
 - **One worker pool.** The extension removes the paper's cognitive and all-other occupation groups once both can be exposed. It cannot show occupation-specific wages, unemployment, switching routes, or skill requirements.
-- **Task-to-job mapping.** The extension maps the paper's local worker-reallocation quantity into a smooth, bounded economy-wide job-elimination target. It does not estimate heterogeneous task weights, hours, occupations, or the number of tasks bundled into a job.
+- **Task-to-job mapping.** The extension assumes task mass is weighted by required labor and maps net eliminated task mass one-for-one to the long-run human-employment target. It does not estimate heterogeneous task weights, hours, occupations, or the number of tasks bundled into a job.
 - **Re-employment effectiveness.** The paper's cross-occupation search discount is reinterpreted as the relative search effectiveness of displaced workers. This preserves a matching friction but is not a separately estimated parameter.
 - **Assumed productivity ceiling.** Task productivity approaches an assumed 30x output ceiling after 2030.
 - **Employment adjustment.** The paper's posting-speed input is reinterpreted as the monthly speed at which employment above the task-based target contracts after ordinary quits. This is not separately calibrated to long-run robotics transitions.
-- **No automatic scale-effect hiring.** Productivity affects output, wages, and factor shares, but does not automatically add human jobs in the one-pool extension. New human-task capacity comes only from the reinstatement ratio.
+- **No automatic scale-effect hiring.** Productivity affects output, wages, and factor shares, but does not independently add human jobs in the one-pool extension. New human-task capacity comes from the reinstatement ratio.
 - **No worker-level distribution.** The source model does not follow individual workers, earnings histories, households, savings, or poverty.
 - **Simplified capital.** Compute and other capital are combined, capital follows an exogenous supply schedule, and saving decisions are not explicit.
 - **No policy response.** Taxes, transfers, unemployment insurance, retraining programs, and new distribution mechanisms are outside the published scenarios.

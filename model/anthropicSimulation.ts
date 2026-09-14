@@ -88,10 +88,6 @@ const FIXED = {
   step: 1 / 12,
 } as const;
 
-// DATA: 2025 CPS occupation-group calibration distributed with Anthropic's explorer.
-// The all-other share scales the paper's Equation (15) reallocation quantity before
-// the one-pool extension bounds it across the full labor market.
-const ALL_OTHER_EMPLOYMENT_SHARE = 0.3764748337849327;
 const NORMAL_UNEMPLOYMENT = 0.03840656852308217;
 
 // ASSUMPTION: The first long-run implementation can be displayed through 2040.
@@ -341,12 +337,33 @@ const actualEconomy = (
   };
 };
 
-// CALCULATED through 2030 from the paper's other-occupation target (Equations 13 and 15).
-// ASSUMPTION after 2030: tanh keeps cumulative job elimination below the labor force while
-// preserving the paper's first-order reallocation quantity when the technology shock is small.
-const jobEliminationTarget = (potential: PotentialEconomy, baseEmployment: number) => (
-  baseEmployment * Math.tanh(ALL_OTHER_EMPLOYMENT_SHARE * Math.expm1(potential.lN))
-);
+// CALCULATED: human task mass removed after accounting for capability, adoption,
+// automation, and the creation of new human tasks. Augmented tasks remain human tasks.
+export const netEliminatedTaskShareAt = (
+  time: number,
+  parameters: EditableScenarioParameters,
+) => {
+  const tech = technologyAt(time, parameters);
+  return tech.m * tech.d * tech.psi * (1 - tech.rho);
+};
+
+// ASSUMPTION: task mass is weighted by required labor, so a percentage-point loss
+// of net human task mass lowers the long-run human-employment target by the same
+// percentage of baseline employment. The 2024 technology state is already embodied
+// in the observed baseline and is removed from subsequent changes.
+const humanEmploymentTarget = (
+  time: number,
+  parameters: EditableScenarioParameters,
+  baseEmployment: number,
+  initialNetEliminatedShare: number,
+) => {
+  const currentNetEliminatedShare = netEliminatedTaskShareAt(time, parameters);
+  const changeFromBaseline = (
+    (currentNetEliminatedShare - initialNetEliminatedShare)
+    / (1 - initialNetEliminatedShare)
+  );
+  return baseEmployment * (1 - changeFromBaseline);
+};
 
 const growthGap = (gdpGap: number, ideasGap: number) => {
   const ideasGrowth = FIXED.baselineTfpGrowth / FIXED.laborShare;
@@ -376,22 +393,25 @@ const runMonthlySystem = (
   let ideasGap = 0;
   const rows: SimulationRow[] = [];
   const months = Math.round((terminalYear - FIXED.start) / FIXED.step);
-  const initialPotential = potentialEconomy(technologyAt(FIXED.start, parameters), ideasGap);
-  const initialJobElimination = jobEliminationTarget(initialPotential, ss.ell0);
+  const initialNetEliminatedShare = netEliminatedTaskShareAt(FIXED.start, parameters);
 
   for (let month = 0; month <= months; month += 1) {
     const time = FIXED.start + month * FIXED.step;
     const tech = technologyAt(time, parameters);
-    const nextTech = technologyAt(time + FIXED.step, parameters);
     const potential = potentialEconomy(tech, ideasGap);
-    const nextPotential = potentialEconomy(nextTech, ideasGap);
     const quitRate = fractionToRate(qBase + qResponsive * priorFinding / ss.fBar);
     const quits = quitRate * employment;
-    const employmentTarget = ss.ell0 - (
-      jobEliminationTarget(potential, ss.ell0) - initialJobElimination
+    const employmentTarget = humanEmploymentTarget(
+      time,
+      parameters,
+      ss.ell0,
+      initialNetEliminatedShare,
     );
-    const nextEmploymentTarget = ss.ell0 - (
-      jobEliminationTarget(nextPotential, ss.ell0) - initialJobElimination
+    const nextEmploymentTarget = humanEmploymentTarget(
+      time + FIXED.step,
+      parameters,
+      ss.ell0,
+      initialNetEliminatedShare,
     );
 
     // ASSUMPTION: normal attrition absorbs contraction first. Layoffs close the

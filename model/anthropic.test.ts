@@ -8,6 +8,7 @@ import {
 } from './anthropic';
 import {
   affectedTaskMassAt,
+  netEliminatedTaskShareAt,
   parametersFromScenario,
   simulatePublishedScenario,
   simulateScenarioPath,
@@ -94,6 +95,46 @@ describe('Anthropic scenario calibration', () => {
     }
   });
 
+  it.each(anthropicScenarios)('derives $name job elimination from the four task parameters', (scenario) => {
+    const parameters = parametersFromScenario(scenario);
+    const path = simulateScenarioPath(parameters, { terminalYear: 2040 });
+    const initial = netEliminatedTaskShareAt(2024, parameters);
+    for (const point of path) {
+      const expected = 100 * (
+        (netEliminatedTaskShareAt(point.date, parameters) - initial) / (1 - initial)
+      );
+      expect(point.eliminatedJobShare).toBeCloseTo(expected, 10);
+      expect(point.eliminatedJobShare).toBeLessThanOrEqual(point.affectedTaskMass + 1e-10);
+    }
+  });
+
+  it('makes productivity independent of the human-employment target', () => {
+    const base = parametersFromScenario(anthropicScenarioById.substantial);
+    const low = simulateScenarioPath(
+      { ...base, productivityAnchor2026: 0.1, productivityGain: 0.1 },
+      { terminalYear: 2040 },
+    );
+    const high = simulateScenarioPath(
+      { ...base, productivityAnchor2026: 1.5, productivityGain: 1.5 },
+      { terminalYear: 2040 },
+    );
+    expect(high.map((point) => point.eliminatedJobShare)).toEqual(
+      low.map((point) => point.eliminatedJobShare),
+    );
+    expect(high.map((point) => point.totalUnemployment)).toEqual(
+      low.map((point) => point.totalUnemployment),
+    );
+  });
+
+  it('fully offsets automation when the reinstatement ratio is one', () => {
+    const base = parametersFromScenario(anthropicScenarioById.extreme);
+    const path = simulateScenarioPath(
+      { ...base, reinstatementRatio: 1 },
+      { terminalYear: 2040 },
+    );
+    expect(path.every((point) => Math.abs(point.eliminatedJobShare) < 1e-10)).toBe(true);
+  });
+
   it('keeps extreme unemployment monotone after 2032 instead of creating a false recovery', () => {
     const path = simulateScenarioPath(
       parametersFromScenario(anthropicScenarioById.extreme),
@@ -118,9 +159,10 @@ describe('Anthropic scenario calibration', () => {
     expect(afterPeak.every((point, index) => (
       index === 0 || point.totalUnemployment >= afterPeak[index - 1].totalUnemployment - 1e-8
     ))).toBe(true);
-    expect(Math.abs(
-      annual.at(-1)!.totalUnemployment - annual.at(-1)!.eliminatedJobShare,
-    )).toBeLessThan(1);
+    expect(annual.at(-1)!.totalUnemployment).toBeGreaterThan(
+      annual.at(-1)!.eliminatedJobShare,
+    );
+    expect(annual.at(-1)!.totalUnemployment - annual.at(-1)!.eliminatedJobShare).toBeLessThan(1);
   });
 
   it('keeps a maximum-disruption custom scenario finite and continuous', () => {

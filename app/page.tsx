@@ -423,7 +423,7 @@ export default function Home() {
         <div><p className="eyebrow">POST-2030 EXTENSION</p><h2>What changes after 2030.</h2></div>
         <div className="boundary-copy">
           <p>Affected task mass follows one logistic path from its 14% mid-2026 anchor toward a 100% ceiling. The growth-rate control replaces the old hard 2030 task-mass endpoint. The published presets map to rates that still reach 20%, 30%, and 50% in 2030.</p>
-          <p>The labor market is modeled as one pool because the old cognitive and all-other split requires the second group to remain permanently unexposed. Human job capacity falls with the share of tasks that are affected, adopted, automated, and not offset by new human tasks.</p>
+          <p>The labor market is modeled as one pool because the old cognitive and all-other split requires the second group to remain permanently unexposed. Human job capacity is calculated directly from the share of tasks that are affected, adopted, automated, and not offset by new human tasks.</p>
           <p>Diffusion continues on its existing logistic path. Task productivity preserves its 2030 level and growth rate, then gradually approaches an assumed 30x task-output ceiling. An automated role no longer creates a replacement opening automatically. Ordinary quits are replaced only when that human job remains in the task-based employment target.</p>
           <strong>Results after 2030 extend the framework under these assumptions and are not values reported by the original authors.</strong>
         </div>

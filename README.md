@@ -14,7 +14,7 @@ Numeric scenario values and provenance metadata live in `model/anthropic.ts`. Th
 
 ## Post-2030 extension
 
-The extension uses one economy-wide labor pool instead of preserving a permanently unexposed occupation group. A smooth, bounded version of the paper's worker-reallocation quantity sets the human-employment target, with automation increasing displacement and reinstatement offsetting it through new human tasks. Technology-eliminated jobs no longer generate replacement vacancies automatically. Remaining openings enter the paper's bounded matching process, so unemployment reflects both the shrinking human-job target and the difficulty displaced workers have finding available work. Diffusion continues logistically and task productivity approaches an assumed 30x ceiling. These are documented extension assumptions, not results from the original authors.
+The extension uses one economy-wide labor pool instead of preserving a permanently unexposed occupation group. Affected task mass, diffusion, automation, and reinstatement directly determine net eliminated human task mass and the human-employment target. Technology-eliminated jobs do not generate replacement vacancies automatically. Remaining openings enter the paper's bounded matching process, so unemployment reflects both the shrinking human-job target and the difficulty displaced workers have finding available work. Productivity affects output, wages, and factor shares rather than independently manufacturing jobs. Diffusion continues logistically and task productivity approaches an assumed 30x ceiling. These are documented extension assumptions, not results from the original authors.
 
 See [MODEL.md](MODEL.md), [SOURCES.md](SOURCES.md), and [LIMITATIONS.md](LIMITATIONS.md).
 
