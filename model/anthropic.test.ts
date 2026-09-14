@@ -10,6 +10,7 @@ import {
   affectedTaskMassAt,
   netEliminatedTaskShareAt,
   parametersFromScenario,
+  simulateFrozen2026Baseline,
   simulatePublishedScenario,
   simulateScenarioPath,
 } from './anthropicSimulation';
@@ -81,6 +82,31 @@ describe('Anthropic scenario calibration', () => {
     const through2040 = simulateScenarioPath(parameters, { terminalYear: 2040 });
     expect(through2040).toHaveLength((2040 - 2026) * 12 + 1);
     expect(through2040.slice(0, through2030.length)).toEqual(through2030);
+  });
+
+  it('indexes GDP and real wages to 100 in January 2026', () => {
+    const path = simulateScenarioPath(
+      parametersFromScenario(anthropicScenarioById.substantial),
+      { terminalYear: 2040 },
+    );
+    expect(path[0].gdpIndex).toBeCloseTo(100, 10);
+    expect(path[0].averageWageIndex).toBeCloseTo(100, 10);
+  });
+
+  it('freezes technology after the mid-2026 anchor while ordinary economics continue', () => {
+    const parameters = parametersFromScenario(anthropicScenarioById.extreme);
+    const scenario = simulateScenarioPath(parameters, { terminalYear: 2040 });
+    const baseline = simulateFrozen2026Baseline(parameters, { terminalYear: 2040 });
+    const anchorIndex = baseline.findIndex((point) => Math.abs(point.date - 2026.5) < 1e-8);
+
+    expect(baseline.slice(0, anchorIndex + 1)).toEqual(scenario.slice(0, anchorIndex + 1));
+    for (const point of baseline.slice(anchorIndex + 1)) {
+      expect(point.affectedTaskMass).toBeCloseTo(baseline[anchorIndex].affectedTaskMass, 10);
+      expect(point.diffusion).toBeCloseTo(baseline[anchorIndex].diffusion, 10);
+      expect(point.productivityGain).toBeCloseTo(baseline[anchorIndex].productivityGain, 10);
+    }
+    expect(baseline.at(-1)!.gdpIndex).toBeGreaterThan(baseline[0].gdpIndex);
+    expect(baseline.at(-1)!.averageWageIndex).toBeGreaterThan(baseline[0].averageWageIndex);
   });
 
   it.each(anthropicScenarios)('keeps the $name exposure and eliminated-job paths monotone and bounded', (scenario) => {

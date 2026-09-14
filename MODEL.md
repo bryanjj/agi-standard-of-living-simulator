@@ -68,6 +68,12 @@ Each month, ordinary quits count toward any decline in `E*`. If employment after
 
 There is one unemployment stock and one vacancy market. Total unemployment combines the normal unemployment pool, structural employment loss implied by `Delta N`, and any temporary gap caused by supported jobs remaining unfilled. The matching function is the bounded CES form from Equation (34) of the paper. The former cross-occupation search parameter is reinterpreted as displaced-worker search effectiveness. Normal unemployment supplies one unit of search per worker; unemployment above the normal pool supplies the selected fraction. This retains the paper's idea that displaced workers may search less effectively because their previous skills or occupation no longer match available work, without assigning them to a permanent origin group.
 
+## Frozen-2026 comparison
+
+GDP, real wages, and unemployment are shown against a second run of the same model. The comparison follows the selected scenario through the mid-2026 technology anchor, then holds affected task mass, diffusion, and AI task productivity fixed at those levels. Automation and reinstatement shares are already constant scenario parameters. Ordinary TFP, labor-force, ideas, capital, quit, vacancy, and matching dynamics continue.
+
+Both GDP and real wages are displayed as indexes equal to 100 in January 2026. Their common trend growth is calculated from the paper's baseline calibration: real wages grow with labor-augmenting ideas at `baseline TFP growth / labor share`, and GDP also includes labor-force growth. The selected scenario and frozen-2026 comparison therefore show levels on the same scale rather than percentage gaps from a hypothetical economy with no AI.
+
 ## Other extension assumptions
 
 Diffusion continues along the logistic calibrated to its 2026 anchor and 2030 setting. Automation and reinstatement shares remain constant. Task productivity follows its linear path through 2030, then matches its 2030 level and slope while approaching an assumed 30x task-output ceiling.

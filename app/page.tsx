@@ -23,6 +23,7 @@ import {
   affectedTaskMassAt,
   parametersFromScenario,
   scenarioParameterRanges,
+  simulateFrozen2026Baseline,
   simulateScenarioPath,
   TERMINAL_YEAR_RANGE,
   type EditableScenarioParameters,
@@ -31,23 +32,30 @@ import {
 
 type ScenarioMode = AnthropicScenarioId | 'custom';
 type MetricId = 'unemployment' | 'gdp' | 'wages' | 'shares' | 'exposure';
+type ChartPoint = ScenarioPathPoint & {
+  baselineTotalUnemployment: number;
+  baselineGdpIndex: number;
+  baselineAverageWageIndex: number;
+};
 
 type MetricSeries = {
-  key: keyof ScenarioPathPoint;
+  key: keyof ChartPoint;
   label: string;
   color: string;
 };
 
 const metricSeries: Record<MetricId, MetricSeries[]> = {
   unemployment: [
-    { key: 'totalUnemployment', label: 'All workers', color: '#c85b2f' },
+    { key: 'totalUnemployment', label: 'Selected scenario', color: '#c85b2f' },
+    { key: 'baselineTotalUnemployment', label: '2026 technology baseline', color: '#9b9d97' },
   ],
   gdp: [
-    { key: 'gdpGap', label: 'GDP above no-AI path', color: '#397765' },
-    { key: 'gdpGrowth', label: 'Annual GDP growth', color: '#c09532' },
+    { key: 'gdpIndex', label: 'Selected scenario', color: '#397765' },
+    { key: 'baselineGdpIndex', label: '2026 technology baseline', color: '#9b9d97' },
   ],
   wages: [
-    { key: 'averageWageGap', label: 'Average wage', color: '#1d211e' },
+    { key: 'averageWageIndex', label: 'Selected scenario', color: '#1d211e' },
+    { key: 'baselineAverageWageIndex', label: '2026 technology baseline', color: '#9b9d97' },
   ],
   shares: [
     { key: 'laborShare', label: 'Labor share', color: '#397765' },
@@ -144,7 +152,7 @@ const parameterControls: Array<{
 ];
 
 const pct = (value: number, digits = 1) => `${value.toFixed(digits)}%`;
-const signedPct = (value: number) => `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
+const indexValue = (value: number) => value.toFixed(1);
 
 const formatChartDate = (value: number) => {
   const year = Math.floor(value + 1e-8);
@@ -158,10 +166,12 @@ function TimeTooltip({
   active,
   label,
   payload,
+  metric,
 }: {
   active?: boolean;
   label?: number;
   payload?: Array<{ name: string; value: number; color: string }>;
+  metric: MetricId;
 }) {
   if (!active || !payload?.length || typeof label !== 'number') return null;
   return (
@@ -171,7 +181,7 @@ function TimeTooltip({
         <span key={item.name}>
           <i style={{ background: item.color }} />
           {item.name}
-          <strong>{pct(item.value)}</strong>
+          <strong>{metric === 'gdp' || metric === 'wages' ? indexValue(item.value) : pct(item.value)}</strong>
         </span>
       ))}
     </div>
@@ -186,10 +196,20 @@ export default function Home() {
   const [metric, setMetric] = useState<MetricId>('unemployment');
   const [terminalYear, setTerminalYear] = useState(TERMINAL_YEAR_RANGE.default);
 
-  const path = useMemo(
+  const scenarioPath = useMemo(
     () => simulateScenarioPath(parameters, { terminalYear }),
     [parameters, terminalYear],
   );
+  const baselinePath = useMemo(
+    () => simulateFrozen2026Baseline(parameters, { terminalYear }),
+    [parameters, terminalYear],
+  );
+  const path = useMemo<ChartPoint[]>(() => scenarioPath.map((point, index) => ({
+    ...point,
+    baselineTotalUnemployment: baselinePath[index].totalUnemployment,
+    baselineGdpIndex: baselinePath[index].gdpIndex,
+    baselineAverageWageIndex: baselinePath[index].averageWageIndex,
+  })), [baselinePath, scenarioPath]);
   const chartTicks = useMemo(() => {
     const ticks = [MODEL_START_YEAR];
     for (let year = MODEL_START_YEAR + 2; year < terminalYear; year += 2) ticks.push(year);
@@ -316,7 +336,7 @@ export default function Home() {
             <p>in {terminalYear}</p>
             <small>Normal-times calibration: {pct(NORMAL_UNEMPLOYMENT_RATE)}</small>
           </article>
-          <article><span>GDP VS. NO-AI PATH</span><strong>{signedPct(final.gdpGap)}</strong><small>{pct(final.gdpGrowth)} annual growth in {terminalYear}</small></article>
+          <article><span>REAL GDP INDEX · 2026 = 100</span><strong>{indexValue(final.gdpIndex)}</strong><small>Frozen-2026 baseline: {indexValue(final.baselineGdpIndex)}</small></article>
           <article><span>HUMAN JOB CAPACITY ELIMINATED</span><strong>{pct(final.eliminatedJobShare)}</strong><small>Net of new human tasks created since 2024</small></article>
           <article><span>LABOR SHARE OF INCOME</span><strong>{pct(final.laborShare)}</strong><small>Capital receives {pct(final.capitalShare)}</small></article>
         </section>
@@ -364,7 +384,9 @@ export default function Home() {
                 />
                 <YAxis
                   domain={metric === 'shares' || metric === 'exposure' ? [0, 100] : ['auto', 'auto']}
-                  tickFormatter={(value) => `${Number(value).toFixed(0)}%`}
+                  tickFormatter={(value) => metric === 'gdp' || metric === 'wages'
+                    ? Number(value).toFixed(0)
+                    : `${Number(value).toFixed(0)}%`}
                   axisLine={false}
                   tickLine={false}
                   width={42}
@@ -375,7 +397,7 @@ export default function Home() {
                 {terminalYear > MODEL_END_YEAR && (
                   <ReferenceLine x={MODEL_END_YEAR} stroke="#9b9d97" strokeDasharray="4 5" />
                 )}
-                <Tooltip content={<TimeTooltip />} />
+                <Tooltip content={<TimeTooltip metric={metric} />} />
                 {metricSeries[metric].map((series) => (
                   <Line
                     key={series.key}
@@ -383,7 +405,8 @@ export default function Home() {
                     dataKey={series.key}
                     name={series.label}
                     stroke={series.color}
-                    strokeWidth={2.5}
+                    strokeWidth={series.key.toString().startsWith('baseline') ? 2 : 2.5}
+                    strokeDasharray={series.key.toString().startsWith('baseline') ? '6 5' : undefined}
                     dot={false}
                     activeDot={{ r: 4, strokeWidth: 0 }}
                     isAnimationActive={false}
@@ -412,7 +435,7 @@ export default function Home() {
             <span style={{ width: `${capitalShareWidth}%` }}><b>{pct(final.capitalShare)}</b> Capital</span>
           </div>
           <div className="wage-list">
-            <span><small>AVERAGE WAGE VS. NO-AI</small><strong>{signedPct(final.averageWageGap)}</strong></span>
+            <span><small>REAL WAGE INDEX · 2026 = 100</small><strong>{indexValue(final.averageWageIndex)}</strong><em>Baseline {indexValue(final.baselineAverageWageIndex)}</em></span>
             <span><small>AFFECTED TASK MASS</small><strong>{pct(final.affectedTaskMass)}</strong></span>
             <span><small>HUMAN JOB CAPACITY ELIMINATED</small><strong>{pct(final.eliminatedJobShare)}</strong></span>
           </div>
@@ -425,6 +448,7 @@ export default function Home() {
           <p>Affected task mass follows one logistic path from its 14% mid-2026 anchor toward a 100% ceiling. The growth-rate control replaces the old hard 2030 task-mass endpoint. The published presets map to rates that still reach 20%, 30%, and 50% in 2030.</p>
           <p>The labor market is modeled as one pool because the old cognitive and all-other split requires the second group to remain permanently unexposed. Human job capacity is calculated directly from the share of tasks that are affected, adopted, automated, and not offset by new human tasks.</p>
           <p>Diffusion continues on its existing logistic path. Task productivity preserves its 2030 level and growth rate, then gradually approaches an assumed 30x task-output ceiling. An automated role no longer creates a replacement opening automatically. Ordinary quits are replaced only when that human job remains in the task-based employment target.</p>
+          <p>The 2026 technology baseline follows the selected scenario through its mid-2026 anchor, then holds task capability, adoption, and AI task productivity fixed. Ordinary productivity, labor-force, and capital growth continue.</p>
           <strong>Results after 2030 extend the framework under these assumptions and are not values reported by the original authors.</strong>
         </div>
       </section>

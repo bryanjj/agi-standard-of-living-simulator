@@ -10,6 +10,7 @@
 - **Assumed productivity ceiling.** Task productivity approaches an assumed 30x output ceiling after 2030.
 - **Employment adjustment.** The paper's posting-speed input is reinterpreted as the monthly speed at which employment above the task-based target contracts after ordinary quits. This is not separately calibrated to long-run robotics transitions.
 - **No automatic scale-effect hiring.** Productivity affects output, wages, and factor shares, but does not independently add human jobs in the one-pool extension. New human-task capacity comes from the reinstatement ratio.
+- **Frozen-2026 comparison.** The comparison is a model counterfactual, not an observed control group. It preserves the selected scenario's technology through mid-2026 and then stops further capability, adoption, and AI task-productivity growth while ordinary economic dynamics continue.
 - **No worker-level distribution.** The source model does not follow individual workers, earnings histories, households, savings, or poverty.
 - **Simplified capital.** Compute and other capital are combined, capital follows an exogenous supply schedule, and saving decisions are not explicit.
 - **No policy response.** Taxes, transfers, unemployment insurance, retraining programs, and new distribution mechanisms are outside the published scenarios.

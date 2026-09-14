@@ -13,6 +13,7 @@ export type EditableScenarioParameters = {
 
 export type ScenarioSimulationOptions = {
   terminalYear?: number;
+  freezeTechnologyAfter?: number;
 };
 
 export type ScenarioPathPoint = {
@@ -24,8 +25,10 @@ export type ScenarioPathPoint = {
   aiTaskShare: number;
   eliminatedJobShare: number;
   gdpGap: number;
+  gdpIndex: number;
   gdpGrowth: number;
   averageWageGap: number;
+  averageWageIndex: number;
   laborShare: number;
   capitalShare: number;
   totalUnemployment: number;
@@ -339,25 +342,25 @@ const actualEconomy = (
 
 // CALCULATED: human task mass removed after accounting for capability, adoption,
 // automation, and the creation of new human tasks. Augmented tasks remain human tasks.
+const netEliminatedTaskShare = (tech: TechnologyPath) => (
+  tech.m * tech.d * tech.psi * (1 - tech.rho)
+);
+
 export const netEliminatedTaskShareAt = (
   time: number,
   parameters: EditableScenarioParameters,
-) => {
-  const tech = technologyAt(time, parameters);
-  return tech.m * tech.d * tech.psi * (1 - tech.rho);
-};
+) => netEliminatedTaskShare(technologyAt(time, parameters));
 
 // ASSUMPTION: task mass is weighted by required labor, so a percentage-point loss
 // of net human task mass lowers the long-run human-employment target by the same
 // percentage of baseline employment. The 2024 technology state is already embodied
 // in the observed baseline and is removed from subsequent changes.
 const humanEmploymentTarget = (
-  time: number,
-  parameters: EditableScenarioParameters,
+  tech: TechnologyPath,
   baseEmployment: number,
   initialNetEliminatedShare: number,
 ) => {
-  const currentNetEliminatedShare = netEliminatedTaskShareAt(time, parameters);
+  const currentNetEliminatedShare = netEliminatedTaskShare(tech);
   const changeFromBaseline = (
     (currentNetEliminatedShare - initialNetEliminatedShare)
     / (1 - initialNetEliminatedShare)
@@ -382,6 +385,7 @@ const smoothPositive = (value: number, width = 0.0001) => {
 const runMonthlySystem = (
   parameters: EditableScenarioParameters,
   terminalYear: number,
+  freezeTechnologyAfter?: number,
 ): { rows: SimulationRow[]; ss: SteadyState } => {
   const ss = steadyState();
   const qBase = (1 - FIXED.responsiveQuitShare) * FIXED.normalQuitRateAnnual / 12;
@@ -397,19 +401,24 @@ const runMonthlySystem = (
 
   for (let month = 0; month <= months; month += 1) {
     const time = FIXED.start + month * FIXED.step;
-    const tech = technologyAt(time, parameters);
+    const technologyTime = freezeTechnologyAfter == null
+      ? time
+      : Math.min(time, freezeTechnologyAfter);
+    const nextTechnologyTime = freezeTechnologyAfter == null
+      ? time + FIXED.step
+      : Math.min(time + FIXED.step, freezeTechnologyAfter);
+    const tech = technologyAt(technologyTime, parameters);
+    const nextTech = technologyAt(nextTechnologyTime, parameters);
     const potential = potentialEconomy(tech, ideasGap);
     const quitRate = fractionToRate(qBase + qResponsive * priorFinding / ss.fBar);
     const quits = quitRate * employment;
     const employmentTarget = humanEmploymentTarget(
-      time,
-      parameters,
+      tech,
       ss.ell0,
       initialNetEliminatedShare,
     );
     const nextEmploymentTarget = humanEmploymentTarget(
-      time + FIXED.step,
-      parameters,
+      nextTech,
       ss.ell0,
       initialNetEliminatedShare,
     );
@@ -483,7 +492,16 @@ export const simulateScenarioPath = (
     TERMINAL_YEAR_RANGE.min,
     TERMINAL_YEAR_RANGE.max,
   );
-  const { rows } = runMonthlySystem(safe, terminalYear);
+  const freezeTechnologyAfter = options.freezeTechnologyAfter == null
+    ? undefined
+    : clamp(options.freezeTechnologyAfter, FIXED.start, terminalYear);
+  const { rows } = runMonthlySystem(safe, terminalYear, freezeTechnologyAfter);
+  const indexYear = 2026;
+  const indexLnY = interpolateRow(rows, indexYear, (row) => row.lnYAct);
+  const indexLnW = interpolateRow(rows, indexYear, (row) => row.wageAct);
+  // CALCULATED from the paper's no-shock TFP and labor-force growth calibration.
+  const baselineWageGrowth = FIXED.baselineTfpGrowth / FIXED.laborShare;
+  const baselineGdpGrowth = baselineWageGrowth + FIXED.laborForceGrowth;
 
   return rows.filter((row) => row.t >= 2026 - 1e-9 && row.t <= terminalYear + 1e-9).map((row) => {
     const priorYear = row.t - 1;
@@ -501,14 +519,30 @@ export const simulateScenarioPath = (
       aiTaskShare: row.x.m * row.x.d * 100,
       eliminatedJobShare: 100 * (1 - row.employmentTarget / (1 - NORMAL_UNEMPLOYMENT)),
       gdpGap: percentGap(row.lnYAct),
-      gdpGrowth: 2 + 100 * annualGapChange,
+      gdpIndex: 100 * Math.exp(
+        baselineGdpGrowth * (row.t - indexYear) + row.lnYAct - indexLnY
+      ),
+      gdpGrowth: 100 * (baselineGdpGrowth + annualGapChange),
       averageWageGap: percentGap(row.wageAct),
+      averageWageIndex: 100 * Math.exp(
+        baselineWageGrowth * (row.t - indexYear) + row.wageAct - indexLnW
+      ),
       laborShare: 100 * FIXED.laborShare * Math.exp(row.lnSLAct),
       capitalShare: 100 * (1 - FIXED.laborShare * Math.exp(row.lnSLAct)),
       totalUnemployment: row.unemployment * 100,
     };
   });
 };
+
+// CALCULATED comparison path: follow the selected scenario through the paper's
+// mid-2026 technology anchor, then hold capability, diffusion, and task productivity fixed.
+export const simulateFrozen2026Baseline = (
+  parameters: EditableScenarioParameters,
+  options: Omit<ScenarioSimulationOptions, 'freezeTechnologyAfter'> = {},
+) => simulateScenarioPath(parameters, {
+  ...options,
+  freezeTechnologyAfter: FIXED.anchor,
+});
 
 export const simulatePublishedScenario = (scenario: AnthropicScenario) => (
   simulateScenarioPath(parametersFromScenario(scenario), { terminalYear: FIXED.end })
