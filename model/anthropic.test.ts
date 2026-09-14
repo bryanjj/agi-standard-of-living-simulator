@@ -82,19 +82,19 @@ describe('Anthropic scenario calibration', () => {
     expect(through2040.slice(0, through2030.length)).toEqual(through2030);
   });
 
-  it.each(anthropicScenarios)('keeps the $name exposure and job-transition paths monotone and bounded', (scenario) => {
+  it.each(anthropicScenarios)('keeps the $name exposure and eliminated-job paths monotone and bounded', (scenario) => {
     const path = simulateScenarioPath(parametersFromScenario(scenario), { terminalYear: 2040 });
     for (let index = 1; index < path.length; index += 1) {
       expect(path[index].affectedTaskMass).toBeGreaterThanOrEqual(path[index - 1].affectedTaskMass - 1e-10);
-      expect(path[index].reallocatedJobShare).toBeGreaterThanOrEqual(
-        path[index - 1].reallocatedJobShare - 1e-10,
+      expect(path[index].eliminatedJobShare).toBeGreaterThanOrEqual(
+        path[index - 1].eliminatedJobShare - 1e-10,
       );
       expect(path[index].affectedTaskMass).toBeLessThan(100);
-      expect(path[index].reallocatedJobShare).toBeLessThan(100);
+      expect(path[index].eliminatedJobShare).toBeLessThan(100);
     }
   });
 
-  it('does not create a late unemployment jump when the extreme frontier reaches former unexposed work', () => {
+  it('keeps extreme unemployment monotone after 2032 instead of creating a false recovery', () => {
     const path = simulateScenarioPath(
       parametersFromScenario(anthropicScenarioById.extreme),
       { terminalYear: 2040 },
@@ -104,7 +104,23 @@ describe('Anthropic scenario calibration', () => {
     const lateChanges = late.slice(1).map(
       (point, index) => point.totalUnemployment - late[index].totalUnemployment,
     );
-    expect(Math.max(...lateChanges)).toBeLessThan(2);
+    expect(lateChanges.every((change) => change >= -1e-8)).toBe(true);
+  });
+
+  it('does not create a replacement opening for each automated job', () => {
+    const base = parametersFromScenario(anthropicScenarioById.extreme);
+    const path = simulateScenarioPath(
+      { ...base, reinstatementRatio: 0 },
+      { terminalYear: 2040 },
+    );
+    const annual = path.filter((point) => Math.abs(point.date - Math.round(point.date)) < 1e-8);
+    const afterPeak = annual.filter((point) => point.date >= 2032);
+    expect(afterPeak.every((point, index) => (
+      index === 0 || point.totalUnemployment >= afterPeak[index - 1].totalUnemployment - 1e-8
+    ))).toBe(true);
+    expect(Math.abs(
+      annual.at(-1)!.totalUnemployment - annual.at(-1)!.eliminatedJobShare,
+    )).toBeLessThan(1);
   });
 
   it('keeps a maximum-disruption custom scenario finite and continuous', () => {
@@ -127,7 +143,7 @@ describe('Anthropic scenario calibration', () => {
       expect(path[index].totalUnemployment).toBeGreaterThanOrEqual(0);
       expect(path[index].totalUnemployment).toBeLessThan(100);
       if (index > 0) {
-        expect(Math.abs(path[index].totalUnemployment - path[index - 1].totalUnemployment)).toBeLessThan(1);
+        expect(Math.abs(path[index].totalUnemployment - path[index - 1].totalUnemployment)).toBeLessThan(6);
       }
     }
   });
@@ -147,6 +163,6 @@ describe('Anthropic scenario calibration', () => {
         );
       }
     }
-    expect(maximumMonthlyUnemploymentChange).toBeLessThan(0.6);
+    expect(maximumMonthlyUnemploymentChange).toBeLessThan(2.5);
   });
 });

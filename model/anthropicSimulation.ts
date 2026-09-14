@@ -22,7 +22,7 @@ export type ScenarioPathPoint = {
   diffusion: number;
   productivityGain: number;
   aiTaskShare: number;
-  reallocatedJobShare: number;
+  eliminatedJobShare: number;
   gdpGap: number;
   gdpGrowth: number;
   averageWageGap: number;
@@ -66,7 +66,7 @@ type SimulationRow = {
   lnSLAct: number;
   employment: number;
   unemployment: number;
-  reallocatedJobs: number;
+  employmentTarget: number;
 };
 
 // PAPER: Korinek et al. (2026), Tables 1, A.1 and A.2.
@@ -89,8 +89,8 @@ const FIXED = {
 } as const;
 
 // DATA: 2025 CPS occupation-group calibration distributed with Anthropic's explorer.
-// The all-other share calibrates how much worker reallocation the paper's two-group model
-// implies before 2030; the extension no longer treats it as a permanent destination group.
+// The all-other share scales the paper's Equation (15) reallocation quantity before
+// the one-pool extension bounds it across the full labor market.
 const ALL_OTHER_EMPLOYMENT_SHARE = 0.3764748337849327;
 const NORMAL_UNEMPLOYMENT = 0.03840656852308217;
 
@@ -290,15 +290,25 @@ const actualEconomy = (
   const complementarity = 1 - sigma;
   const sL = FIXED.laborShare;
   const sK = 1 - sL;
-  const lambda = potential.laborTaskShare;
+  const lambda = Math.max(potential.laborTaskShare, 1e-12);
   const capitalBlock = (1 - sL * Math.exp(potential.lnSL)) * Math.exp(-complementarity * potential.xr);
-  const employmentRatio = employment / baseEmployment;
+  // CALCULATED: keep the production solver inside the logarithm's numerical
+  // domain when a stress-test scenario drives employment effectively to zero.
+  const employmentRatio = Math.max(employment / baseEmployment, 1e-9);
   const laborPrice = (Math.log(lambda) - Math.log(employmentRatio)) / sigma;
-  const priceBlock = sL * lambda * Math.exp(complementarity * (laborPrice - ideasGap));
+  const lnPriceBlock = Math.log(sL) + Math.log(lambda)
+    + complementarity * (laborPrice - ideasGap);
 
   const evaluate = (rentalGap: number) => {
-    const laborShare = 1 - capitalBlock * Math.exp(complementarity * rentalGap);
-    const outputComponent = sigma / complementarity * Math.log(laborShare / priceBlock);
+    // CALCULATED: the root finder can probe just outside the feasible factor-share
+    // interval in near-zero-employment stress tests. The bounded value preserves
+    // a finite limit without changing ordinary scenario results.
+    const laborShare = clamp(
+      1 - capitalBlock * Math.exp(complementarity * rentalGap),
+      1e-12,
+      1 - 1e-12,
+    );
+    const outputComponent = sigma / complementarity * (Math.log(laborShare) - lnPriceBlock);
     const lnY = outputComponent + complementarity * ideasGap;
     return {
       laborShare,
@@ -332,9 +342,9 @@ const actualEconomy = (
 };
 
 // CALCULATED through 2030 from the paper's other-occupation target (Equations 13 and 15).
-// ASSUMPTION after 2030: tanh keeps cumulative job transitions below the labor force while
-// preserving the paper's first-order reallocation rate when the technology shock is small.
-const reallocatedJobTarget = (potential: PotentialEconomy, baseEmployment: number) => (
+// ASSUMPTION after 2030: tanh keeps cumulative job elimination below the labor force while
+// preserving the paper's first-order reallocation quantity when the technology shock is small.
+const jobEliminationTarget = (potential: PotentialEconomy, baseEmployment: number) => (
   baseEmployment * Math.tanh(ALL_OTHER_EMPLOYMENT_SHARE * Math.expm1(potential.lN))
 );
 
@@ -367,8 +377,7 @@ const runMonthlySystem = (
   const rows: SimulationRow[] = [];
   const months = Math.round((terminalYear - FIXED.start) / FIXED.step);
   const initialPotential = potentialEconomy(technologyAt(FIXED.start, parameters), ideasGap);
-  const initialReallocatedJobs = reallocatedJobTarget(initialPotential, ss.ell0);
-  let reallocatedJobs = initialReallocatedJobs;
+  const initialJobElimination = jobEliminationTarget(initialPotential, ss.ell0);
 
   for (let month = 0; month <= months; month += 1) {
     const time = FIXED.start + month * FIXED.step;
@@ -378,16 +387,25 @@ const runMonthlySystem = (
     const nextPotential = potentialEconomy(nextTech, ideasGap);
     const quitRate = fractionToRate(qBase + qResponsive * priorFinding / ss.fBar);
     const quits = quitRate * employment;
-    const targetReallocation = reallocatedJobTarget(nextPotential, ss.ell0);
-    const transitionGap = smoothPositive(targetReallocation - reallocatedJobs, 1e-8);
-    const jobTransitions = parameters.postingSpeed * transitionGap;
-    const layoffs = jobTransitions;
-    const employmentShortfall = smoothPositive(ss.ell0 - employment);
-    const vacancies = (
-      quits
-      + jobTransitions
-      + parameters.postingSpeed * employmentShortfall
-    ) / ss.piBar;
+    const employmentTarget = ss.ell0 - (
+      jobEliminationTarget(potential, ss.ell0) - initialJobElimination
+    );
+    const nextEmploymentTarget = ss.ell0 - (
+      jobEliminationTarget(nextPotential, ss.ell0) - initialJobElimination
+    );
+
+    // ASSUMPTION: normal attrition absorbs contraction first. Layoffs close the
+    // remaining gap at the selected adjustment speed. A technology-eliminated
+    // job does not create a replacement vacancy. Vacancies are posted only for
+    // human jobs that remain in the task-based employment target.
+    const employmentAfterQuits = employment - quits;
+    const layoffs = parameters.postingSpeed * smoothPositive(
+      employmentAfterQuits - nextEmploymentTarget,
+      1e-8,
+    );
+    const employmentBeforeHires = employmentAfterQuits - layoffs;
+    const desiredHires = smoothPositive(nextEmploymentTarget - employmentBeforeHires, 1e-8);
+    const vacancies = desiredHires / ss.piBar;
     const displacedUnemployment = smoothPositive(unemployed - ss.UBar);
     const effectiveSearch = unemployed
       - (1 - parameters.reemploymentEffectiveness) * displacedUnemployment;
@@ -403,12 +421,11 @@ const runMonthlySystem = (
       lnSLAct: actual.lnSL,
       employment,
       unemployment: unemployed,
-      reallocatedJobs: reallocatedJobs - initialReallocatedJobs,
+      employmentTarget,
     });
 
-    employment = (1 - quitRate) * employment - layoffs + newHires;
+    employment = employmentBeforeHires + newHires;
     unemployed = unemployed + quits + layoffs - newHires;
-    reallocatedJobs += jobTransitions;
     priorFinding = findingRate;
     ideasGap += FIXED.step * growthGap(actual.lnY, ideasGap);
   }
@@ -462,7 +479,7 @@ export const simulateScenarioPath = (
       diffusion: row.x.d * 100,
       productivityGain: row.x.a,
       aiTaskShare: row.x.m * row.x.d * 100,
-      reallocatedJobShare: 100 * row.reallocatedJobs / (1 - NORMAL_UNEMPLOYMENT),
+      eliminatedJobShare: 100 * (1 - row.employmentTarget / (1 - NORMAL_UNEMPLOYMENT)),
       gdpGap: percentGap(row.lnYAct),
       gdpGrowth: 2 + 100 * annualGapChange,
       averageWageGap: percentGap(row.wageAct),

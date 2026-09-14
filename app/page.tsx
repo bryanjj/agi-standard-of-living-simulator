@@ -56,7 +56,7 @@ const metricSeries: Record<MetricId, MetricSeries[]> = {
   exposure: [
     { key: 'affectedTaskMass', label: 'All affected tasks', color: '#1d211e' },
     { key: 'aiTaskShare', label: 'Task instances using technology', color: '#397765' },
-    { key: 'reallocatedJobShare', label: 'Jobs that have transitioned', color: '#c85b2f' },
+    { key: 'eliminatedJobShare', label: 'Human job capacity eliminated', color: '#c85b2f' },
   ],
 };
 
@@ -135,11 +135,11 @@ const parameterControls: Array<{
   },
   {
     key: 'postingSpeed',
-    label: 'How quickly do jobs transition?',
-    term: 'Monthly job transition speed',
-    description: 'The share of the gap between completed job transitions and the model’s transition target that occurs each month.',
+    label: 'How quickly does employment adjust?',
+    term: 'Monthly employment adjustment speed',
+    description: 'After technology lowers the number of human jobs supported by the task mix, this is the share of the remaining employment gap that closes each month.',
     format: (value) => `${(value * 100).toFixed(0)}%`,
-    example: (value) => `At ${Math.round(value * 100)}%, ${Math.round(value * 100)} of every 100 pending job transitions occur each month.`,
+    example: (value) => `At ${Math.round(value * 100)}%, employers close ${Math.round(value * 100)} of every 100 excess positions each month after ordinary quits are counted.`,
   },
 ];
 
@@ -317,7 +317,7 @@ export default function Home() {
             <small>Normal-times calibration: {pct(NORMAL_UNEMPLOYMENT_RATE)}</small>
           </article>
           <article><span>GDP VS. NO-AI PATH</span><strong>{signedPct(final.gdpGap)}</strong><small>{pct(final.gdpGrowth)} annual growth in {terminalYear}</small></article>
-          <article><span>JOBS THAT HAVE TRANSITIONED</span><strong>{pct(final.reallocatedJobShare)}</strong><small>Cumulative jobs replaced or reorganized since 2024</small></article>
+          <article><span>HUMAN JOB CAPACITY ELIMINATED</span><strong>{pct(final.eliminatedJobShare)}</strong><small>Net of new human tasks created since 2024</small></article>
           <article><span>LABOR SHARE OF INCOME</span><strong>{pct(final.laborShare)}</strong><small>Capital receives {pct(final.capitalShare)}</small></article>
         </section>
       </section>
@@ -414,7 +414,7 @@ export default function Home() {
           <div className="wage-list">
             <span><small>AVERAGE WAGE VS. NO-AI</small><strong>{signedPct(final.averageWageGap)}</strong></span>
             <span><small>AFFECTED TASK MASS</small><strong>{pct(final.affectedTaskMass)}</strong></span>
-            <span><small>JOBS THAT HAVE TRANSITIONED</small><strong>{pct(final.reallocatedJobShare)}</strong></span>
+            <span><small>HUMAN JOB CAPACITY ELIMINATED</small><strong>{pct(final.eliminatedJobShare)}</strong></span>
           </div>
         </article>
       </section>
@@ -423,8 +423,8 @@ export default function Home() {
         <div><p className="eyebrow">POST-2030 EXTENSION</p><h2>What changes after 2030.</h2></div>
         <div className="boundary-copy">
           <p>Affected task mass follows one logistic path from its 14% mid-2026 anchor toward a 100% ceiling. The growth-rate control replaces the old hard 2030 task-mass endpoint. The published presets map to rates that still reach 20%, 30%, and 50% in 2030.</p>
-          <p>The labor market is modeled as one pool because the old cognitive and all-other split requires the second group to remain permanently unexposed. As technology reaches more tasks, jobs transition out of their old form and replacement roles are posted across the economy.</p>
-          <p>Diffusion continues on its existing logistic path. Task productivity preserves its 2030 level and growth rate, then gradually approaches an assumed 30x task-output ceiling. Each completed transition ends an old role and posts a replacement role; displaced workers pass through the matching process before re-employment.</p>
+          <p>The labor market is modeled as one pool because the old cognitive and all-other split requires the second group to remain permanently unexposed. Human job capacity falls with the share of tasks that are affected, adopted, automated, and not offset by new human tasks.</p>
+          <p>Diffusion continues on its existing logistic path. Task productivity preserves its 2030 level and growth rate, then gradually approaches an assumed 30x task-output ceiling. An automated role no longer creates a replacement opening automatically. Ordinary quits are replaced only when that human job remains in the task-based employment target.</p>
           <strong>Results after 2030 extend the framework under these assumptions and are not values reported by the original authors.</strong>
         </div>
       </section>
