@@ -70,6 +70,14 @@ const metricSeries: Record<MetricId, MetricSeries[]> = {
   ],
 };
 
+const metricYAxisLabels: Record<MetricId, string> = {
+  unemployment: 'Unemployment rate (%)',
+  gdp: 'Real GDP ($T, 2026 dollars)',
+  wages: 'Average annual wage ($, 2026 dollars)',
+  shares: 'Share of national income (%)',
+  exposure: 'Task or job-capacity share (%)',
+};
+
 const parameterControls: Array<{
   key: keyof EditableScenarioParameters;
   label: string;
@@ -346,7 +354,7 @@ export default function Home() {
 
           <div className="time-chart">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={path} margin={{ top: 14, right: 18, bottom: 8, left: 2 }}>
+              <LineChart data={path} margin={{ top: 14, right: 18, bottom: 8, left: 12 }}>
                 <CartesianGrid vertical={false} stroke="#dedbd3" strokeDasharray="3 5" />
                 <XAxis
                   dataKey="date"
@@ -364,7 +372,14 @@ export default function Home() {
                     : `${Number(value).toFixed(0)}%`}
                   axisLine={false}
                   tickLine={false}
-                  width={42}
+                  width={76}
+                  label={{
+                    value: metricYAxisLabels[metric],
+                    angle: -90,
+                    position: 'insideLeft',
+                    offset: 4,
+                    style: { fill: '#626660', fontSize: 9, textAnchor: 'middle' },
+                  }}
                 />
                 {metric === 'unemployment' && (
                   <ReferenceLine y={NORMAL_UNEMPLOYMENT_RATE} stroke="#9b9d97" strokeDasharray="5 5" />
