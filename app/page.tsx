@@ -144,6 +144,14 @@ const parameterControls: Array<{
     example: (value) => `At ${value.toFixed(2)}, automating 100 task units creates ${Math.round(value * 100)} new task units for people.`,
   },
   {
+    key: 'jobLossPassThrough',
+    label: 'How much task displacement reduces the total number of jobs?',
+    term: 'Job-loss pass-through',
+    description: 'After reinstatement is counted, this is the share of remaining AI-displaced task mass that ultimately reduces the overall job pool. The rest is absorbed by demand and jobs created elsewhere.',
+    format: (value) => `${(value * 100).toFixed(1)}%`,
+    example: (value) => `At ${(value * 100).toFixed(1)}%, every 100 residual task-equivalent positions displaced by AI reduce the overall job pool by about ${Math.round(value * 100)} positions.`,
+  },
+  {
     key: 'reemploymentEffectiveness',
     label: 'How easily do displaced workers find new work?',
     term: 'Displaced-worker search effectiveness',
@@ -425,7 +433,7 @@ export default function Home() {
           <ol className="extension-list">
             <li><b>Affected task mass keeps growing.</b><span>The selected annual expansion rate carries task capability toward a maximum of 100%.</span></li>
             <li><b>Diffusion and task productivity continue smoothly.</b><span>Diffusion stays on its existing path. After 2030, task productivity continues at the same scenario-specific log growth rate used through 2030.</span></li>
-            <li><b>Workers share one labor market.</b><span>Job capacity falls only when affected tasks are used, automated, and not offset by reinstatement. Automating a role does not automatically create a replacement opening.</span></li>
+            <li><b>Workers share one labor market.</b><span>Job-loss pass-through controls how much residual task displacement reduces the total job pool after demand and jobs created elsewhere are counted. Preset values are calibrated to Anthropic&apos;s 2030 aggregate unemployment results.</span></li>
             <li><b>The comparison freezes technology in mid-2026.</b><span>The dashed line holds task capability, diffusion, and AI task productivity fixed while ordinary economic growth continues.</span></li>
           </ol>
           <p className="measurement-note">Dollar values use 2026 reference levels: {gdpValue(REAL_GDP_2026_TRILLIONS)} of annualized U.S. GDP and {wageValue(REAL_ANNUAL_WAGE_2026)} of annual earnings for the average private-sector payroll worker.</p>

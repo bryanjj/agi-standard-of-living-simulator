@@ -20,13 +20,13 @@ The monthly sequence is:
 
 1. Evaluate logistic paths for affected task mass and diffusion, plus the smooth productivity path.
 2. Solve the paper's exact task-production block and capital-market root.
-3. Calculate net human task elimination from the four technology parameters and convert it into a target for human employment.
+3. Calculate net human task elimination from the four technology parameters, then apply the job-loss pass-through to obtain the target reduction in total employment.
 4. Count ordinary quits toward any required employment contraction, then close a fraction of the remaining gap through layoffs.
 5. Post vacancies only for human jobs that remain in the target.
 6. Match unemployed workers to vacancies with the paper's bounded CES matching function.
 7. Update employment, unemployment, GDP, wages, factor shares, and the ideas stock.
 
-The preset inputs still reach the published affected-task masses in 2030. The economic outcomes are no longer intended to replicate the paper's group-specific unemployment results because the post-2030 extension removes the permanent unexposed occupation group on which those results depend.
+The preset inputs still reach the published affected-task masses in 2030. Their pass-through values are calibrated to reproduce the paper's aggregate unemployment rates at that checkpoint. With restored employment, the production block also produces GDP, average wage, and factor-share results close to Table 3 without a separate GDP calibration.
 
 ## Editable scenarios
 
@@ -37,6 +37,7 @@ The three presets can be used as starting points. Editing any control creates a 
 - log productivity gain in mid-2026 and 2030;
 - automation share;
 - reinstatement ratio;
+- job-loss pass-through;
 - displaced-worker search effectiveness; and
 - monthly employment-adjustment speed.
 
@@ -56,17 +57,17 @@ The paper's task framework distinguishes automation, which moves a task from lab
 
 Tasks where AI augments a worker rather than automating the task remain human tasks. Each reinstated task offsets one automated task unit. Productivity changes output per AI-used task but does not independently add or remove human tasks.
 
-Let `N0` be the task elimination already embodied in the calibrated 2024 labor market and `E0` normal-times employment. The change from that baseline and the human-employment target are:
+Let `N0` be the task elimination already embodied in the calibrated 2024 labor market, `E0` normal-times employment, and `beta` job-loss pass-through. The change from that baseline and the human-employment target are:
 
 `Delta N(t) = [N(t) - N0] / [1 - N0]`
 
-`E*(t) = E0 × [1 - Delta N(t)]`
+`E*(t) = E0 × [1 - beta × Delta N(t)]`
 
-The one-for-one mapping from labor-weighted task mass to job capacity is an extension assumption. It keeps permanent AI-related employment loss bounded by net eliminated task mass. Eliminating a job does not create a replacement opening automatically.
+Job-loss pass-through is the share of residual task displacement that reduces the aggregate job pool after demand growth and jobs created elsewhere are counted. It is calibrated to the paper's 2030 unemployment result for each preset: 8.0% in modest, 12.5% in substantial, and 31.1% in extreme. These are reduced-form calibration values, not empirical estimates. A value of zero fully absorbs displacement elsewhere; a value of one maps residual task displacement one-for-one to lost job capacity.
 
 Each month, ordinary quits count toward any decline in `E*`. If employment after quits still exceeds next month's target, the selected adjustment-speed fraction of that excess becomes layoffs. If employment is below the target, employers post only enough vacancies to fill the remaining human jobs. The paper's bounded matching function determines how many of those vacancies produce hires.
 
-There is one unemployment stock and one vacancy market. Total unemployment combines the normal unemployment pool, structural employment loss implied by `Delta N`, and any temporary gap caused by supported jobs remaining unfilled. The matching function is the bounded CES form from Equation (34) of the paper. The former cross-occupation search parameter is reinterpreted as displaced-worker search effectiveness. Normal unemployment supplies one unit of search per worker; unemployment above the normal pool supplies the selected fraction. This retains the paper's idea that displaced workers may search less effectively because their previous skills or occupation no longer match available work, without assigning them to a permanent origin group.
+There is one unemployment stock and one vacancy market. Total unemployment combines the normal unemployment pool, structural employment loss implied by `beta × Delta N`, and any temporary gap caused by supported jobs remaining unfilled. The matching function is the bounded CES form from Equation (34) of the paper. The former cross-occupation search parameter is reinterpreted as displaced-worker search effectiveness. Normal unemployment supplies one unit of search per worker; unemployment above the normal pool supplies the selected fraction.
 
 ## Frozen-2026 comparison
 

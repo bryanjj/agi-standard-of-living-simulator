@@ -6,6 +6,7 @@ export type EditableScenarioParameters = {
   productivityGain: number;
   automationShare: number;
   reinstatementRatio: number;
+  jobLossPassThrough: number;
   reemploymentEffectiveness: number;
   postingSpeed: number;
   productivityAnchor2026: number;
@@ -129,6 +130,13 @@ export const parametersFromScenario = (scenario: AnthropicScenario): EditableSce
   productivityGain: scenario.inputs.productivityGain.value,
   automationShare: scenario.inputs.automationShare.value,
   reinstatementRatio: scenario.inputs.reinstatementRatio.value,
+  // CALCULATED: reduced-form labor absorption calibrated so each preset reproduces
+  // the paper's 2030 aggregate unemployment while retaining its production inputs.
+  jobLossPassThrough: scenario.id === 'modest'
+    ? 0.07994812151388901
+    : scenario.id === 'extreme'
+      ? 0.3110093964982952
+      : 0.12533275982016237,
   reemploymentEffectiveness: scenario.inputs.searchDiscount.value,
   postingSpeed: scenario.inputs.postingSpeed.value,
   productivityAnchor2026: scenario.id === 'modest' ? 0.3 : scenario.id === 'extreme' ? 0.45 : 0.35,
@@ -144,6 +152,7 @@ export const scenarioParameterRanges: Record<keyof EditableScenarioParameters, {
   productivityGain: { min: 0.1, max: 1.5, step: 0.01 },
   automationShare: { min: 0, max: 1, step: 0.01 },
   reinstatementRatio: { min: 0, max: 1, step: 0.01 },
+  jobLossPassThrough: { min: 0, max: 1, step: 0.01 },
   reemploymentEffectiveness: { min: 0.01, max: 1, step: 0.01 },
   postingSpeed: { min: 0.01, max: 1, step: 0.01 },
   productivityAnchor2026: { min: 0.1, max: 1.5, step: 0.01 },
@@ -340,21 +349,22 @@ export const netEliminatedTaskShareAt = (
   parameters: EditableScenarioParameters,
 ) => netEliminatedTaskShare(technologyAt(time, parameters));
 
-// ASSUMPTION: task mass is weighted by required labor, so a percentage-point loss
-// of net human task mass lowers the long-run human-employment target by the same
-// percentage of baseline employment. The 2024 technology state is already embodied
-// in the observed baseline and is removed from subsequent changes.
+// ASSUMPTION: task mass is weighted by required labor. Job-loss pass-through is
+// the reduced-form share of residual task displacement that lowers long-run human
+// employment after demand and jobs elsewhere are counted. The 2024 technology
+// state is already embodied in the observed baseline and is removed from changes.
 const humanEmploymentTarget = (
   tech: TechnologyPath,
   baseEmployment: number,
   initialNetEliminatedShare: number,
+  jobLossPassThrough: number,
 ) => {
   const currentNetEliminatedShare = netEliminatedTaskShare(tech);
   const changeFromBaseline = (
     (currentNetEliminatedShare - initialNetEliminatedShare)
     / (1 - initialNetEliminatedShare)
   );
-  return baseEmployment * (1 - changeFromBaseline);
+  return baseEmployment * (1 - jobLossPassThrough * changeFromBaseline);
 };
 
 const growthGap = (gdpGap: number, ideasGap: number) => {
@@ -405,17 +415,19 @@ const runMonthlySystem = (
       tech,
       ss.ell0,
       initialNetEliminatedShare,
+      parameters.jobLossPassThrough,
     );
     const nextEmploymentTarget = humanEmploymentTarget(
       nextTech,
       ss.ell0,
       initialNetEliminatedShare,
+      parameters.jobLossPassThrough,
     );
 
     // ASSUMPTION: normal attrition absorbs contraction first. Layoffs close the
-    // remaining gap at the selected adjustment speed. A technology-eliminated
-    // job does not create a replacement vacancy. Vacancies are posted only for
-    // human jobs that remain in the task-based employment target.
+    // remaining gap at the selected adjustment speed. Labor absorption is already
+    // included in the pass-through-adjusted target; vacancies are posted only for
+    // the human jobs supported by that target.
     const employmentAfterQuits = employment - quits;
     const layoffs = parameters.postingSpeed * smoothPositive(
       employmentAfterQuits - nextEmploymentTarget,
@@ -472,6 +484,7 @@ export const simulateScenarioPath = (
     productivityGain: clamp(parameters.productivityGain, 0, 1.5),
     automationShare: clamp(parameters.automationShare, 0, 1),
     reinstatementRatio: clamp(parameters.reinstatementRatio, 0, 1),
+    jobLossPassThrough: clamp(parameters.jobLossPassThrough, 0, 1),
     reemploymentEffectiveness: clamp(parameters.reemploymentEffectiveness, 0.01, 1),
     postingSpeed: clamp(parameters.postingSpeed, 0.01, 1),
     productivityAnchor2026: clamp(parameters.productivityAnchor2026, 0, 1.5),

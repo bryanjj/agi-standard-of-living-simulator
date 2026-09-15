@@ -145,7 +145,7 @@ describe('Anthropic scenario calibration', () => {
     }
   });
 
-  it.each(anthropicScenarios)('derives $name job elimination from the four task parameters', (scenario) => {
+  it.each(anthropicScenarios)('derives $name job-pool loss from task displacement and pass-through', (scenario) => {
     const parameters = parametersFromScenario(scenario);
     const path = simulateScenarioPath(parameters, { terminalYear: 2040 });
     const initial = netEliminatedTaskShareAt(2024, parameters);
@@ -153,7 +153,10 @@ describe('Anthropic scenario calibration', () => {
       const expected = 100 * (
         (netEliminatedTaskShareAt(point.date, parameters) - initial) / (1 - initial)
       );
-      expect(point.eliminatedJobShare).toBeCloseTo(expected, 10);
+      expect(point.eliminatedJobShare).toBeCloseTo(
+        parameters.jobLossPassThrough * expected,
+        10,
+      );
       expect(point.eliminatedJobShare).toBeLessThanOrEqual(point.affectedTaskMass + 1e-10);
     }
   });
@@ -198,21 +201,27 @@ describe('Anthropic scenario calibration', () => {
     expect(lateChanges.every((change) => change >= -1e-8)).toBe(true);
   });
 
-  it('does not create a replacement opening for each automated job', () => {
+  it.each(anthropicScenarios)('calibrates $name pass-through to its published 2030 unemployment', (scenario) => {
+    const final = simulatePublishedScenario(scenario).at(-1)!;
+    expect(final.totalUnemployment).toBeCloseTo(scenario.outcomes.totalUnemployment.value, 8);
+    expect(Math.abs(final.gdpGap - scenario.outcomes.gdpAboveNoAi.value)).toBeLessThan(1.5);
+    expect(Math.abs(final.averageWageGap - scenario.outcomes.averageWageAboveNoAi.value)).toBeLessThan(0.1);
+    expect(Math.abs(final.laborShare - scenario.outcomes.laborShare.value)).toBeLessThan(0.1);
+  });
+
+  it('uses job-loss pass-through only in the labor-market target', () => {
     const base = parametersFromScenario(anthropicScenarioById.extreme);
-    const path = simulateScenarioPath(
-      { ...base, reinstatementRatio: 0 },
-      { terminalYear: 2040 },
-    );
-    const annual = path.filter((point) => Math.abs(point.date - Math.round(point.date)) < 1e-8);
-    const afterPeak = annual.filter((point) => point.date >= 2032);
-    expect(afterPeak.every((point, index) => (
-      index === 0 || point.totalUnemployment >= afterPeak[index - 1].totalUnemployment - 1e-8
-    ))).toBe(true);
-    expect(annual.at(-1)!.totalUnemployment).toBeGreaterThan(
-      annual.at(-1)!.eliminatedJobShare,
-    );
-    expect(annual.at(-1)!.totalUnemployment - annual.at(-1)!.eliminatedJobShare).toBeLessThan(1);
+    const absorbed = simulateScenarioPath(
+      { ...base, jobLossPassThrough: 0 },
+      { terminalYear: 2030 },
+    ).at(-1)!;
+    const passedThrough = simulateScenarioPath(
+      { ...base, jobLossPassThrough: 1 },
+      { terminalYear: 2030 },
+    ).at(-1)!;
+    expect(absorbed.eliminatedJobShare).toBeCloseTo(0, 10);
+    expect(passedThrough.eliminatedJobShare).toBeGreaterThan(25);
+    expect(passedThrough.totalUnemployment).toBeGreaterThan(absorbed.totalUnemployment);
   });
 
   it('keeps a maximum-disruption custom scenario finite and continuous', () => {
@@ -224,6 +233,7 @@ describe('Anthropic scenario calibration', () => {
       productivityGain: 1.5,
       automationShare: 1,
       reinstatementRatio: 0,
+      jobLossPassThrough: 1,
       reemploymentEffectiveness: 0.01,
       postingSpeed: 1,
     }, { terminalYear: 2040 });
