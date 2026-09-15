@@ -30,6 +30,7 @@ export type ScenarioPathPoint = {
   gdpGrowth: number;
   averageWageGap: number;
   realAnnualWage: number;
+  laborIncomePerParticipant: number;
   laborShare: number;
   capitalShare: number;
   totalUnemployment: number;
@@ -188,6 +189,33 @@ const technologyAt = (time: number, parameters: EditableScenarioParameters): Tec
     a: productivityAt(time, parameters),
     psi: parameters.automationShare,
     rho: parameters.reinstatementRatio,
+  };
+};
+
+// ASSUMPTION: preserve the paper's production block through its 2030 boundary.
+// Beyond 2030, displacement absorbed by demand or replacement jobs is represented
+// as new human-task demand in the production block. The flat-at-zero exponential
+// ramp makes the extension differentiable where it begins.
+const smoothIncrementBeyond = (value: number, width = 0.001) => (
+  value <= 0 ? 0 : value * Math.exp(-width / value)
+);
+
+const technologyForProduction = (
+  tech: TechnologyPath,
+  parameters: EditableScenarioParameters,
+): TechnologyPath => {
+  const anchor = technologyAt(FIXED.end, parameters);
+  const automatedTaskMass = tech.m * tech.d * tech.psi;
+  if (automatedTaskMass <= 0) return tech;
+
+  const anchorElimination = anchor.m * anchor.d * anchor.psi * (1 - anchor.rho);
+  const currentElimination = automatedTaskMass * (1 - tech.rho);
+  const incrementalElimination = smoothIncrementBeyond(currentElimination - anchorElimination);
+  const absorbedHumanTasks = (1 - parameters.jobLossPassThrough) * incrementalElimination;
+
+  return {
+    ...tech,
+    rho: clamp(tech.rho + absorbedHumanTasks / automatedTaskMass, tech.rho, 1),
   };
 };
 
@@ -408,7 +436,8 @@ const runMonthlySystem = (
       : Math.min(time + FIXED.step, freezeTechnologyAfter);
     const tech = technologyAt(technologyTime, parameters);
     const nextTech = technologyAt(nextTechnologyTime, parameters);
-    const potential = potentialEconomy(tech, ideasGap);
+    const productionTech = technologyForProduction(tech, parameters);
+    const potential = potentialEconomy(productionTech, ideasGap);
     const quitRate = fractionToRate(qBase + qResponsive * priorFinding / ss.fBar);
     const quits = quitRate * employment;
     const employmentTarget = humanEmploymentTarget(
@@ -510,6 +539,9 @@ export const simulateScenarioPath = (
     const annualGapChange = row.t >= 2025
       ? row.lnYAct - interpolateRow(rows, priorYear, (item) => item.lnYAct)
       : 0;
+    const realAnnualWage = REAL_ANNUAL_WAGE_2026 * Math.exp(
+      baselineWageGrowth * (row.t - referenceYear) + row.wageAct - referenceLnW
+    );
     return {
       date: row.t,
       label: Math.abs(row.t - Math.round(row.t)) < 1e-8
@@ -526,9 +558,8 @@ export const simulateScenarioPath = (
       ),
       gdpGrowth: 100 * (baselineGdpGrowth + annualGapChange),
       averageWageGap: percentGap(row.wageAct),
-      realAnnualWage: REAL_ANNUAL_WAGE_2026 * Math.exp(
-        baselineWageGrowth * (row.t - referenceYear) + row.wageAct - referenceLnW
-      ),
+      realAnnualWage,
+      laborIncomePerParticipant: realAnnualWage * (1 - row.unemployment),
       laborShare: 100 * FIXED.laborShare * Math.exp(row.lnSLAct),
       capitalShare: 100 * (1 - FIXED.laborShare * Math.exp(row.lnSLAct)),
       totalUnemployment: row.unemployment * 100,

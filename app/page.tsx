@@ -33,11 +33,12 @@ import {
 } from '../model/anthropicSimulation';
 
 type ScenarioMode = AnthropicScenarioId | 'custom';
-type MetricId = 'unemployment' | 'gdp' | 'wages' | 'shares' | 'exposure';
+type MetricId = 'unemployment' | 'gdp' | 'wages' | 'laborIncome' | 'shares' | 'exposure';
 type ChartPoint = ScenarioPathPoint & {
   baselineTotalUnemployment: number;
   baselineRealGdpTrillions: number;
   baselineRealAnnualWage: number;
+  baselineLaborIncomePerParticipant: number;
 };
 
 type MetricSeries = {
@@ -59,6 +60,10 @@ const metricSeries: Record<MetricId, MetricSeries[]> = {
     { key: 'realAnnualWage', label: 'Selected scenario', color: '#1d211e' },
     { key: 'baselineRealAnnualWage', label: '2026 technology baseline', color: '#9b9d97' },
   ],
+  laborIncome: [
+    { key: 'laborIncomePerParticipant', label: 'Selected scenario', color: '#704b8c' },
+    { key: 'baselineLaborIncomePerParticipant', label: '2026 technology baseline', color: '#9b9d97' },
+  ],
   shares: [
     { key: 'laborShare', label: 'Labor share', color: '#397765' },
     { key: 'capitalShare', label: 'Capital share', color: '#c85b2f' },
@@ -74,6 +79,7 @@ const metricYAxisLabels: Record<MetricId, string> = {
   unemployment: 'Unemployment rate (%)',
   gdp: 'Real GDP ($T, 2026 dollars)',
   wages: 'Average annual wage ($, 2026 dollars)',
+  laborIncome: 'Labor income per labor-force participant ($, 2026 dollars)',
   shares: 'Share of national income (%)',
   exposure: 'Task or job-capacity share (%)',
 };
@@ -147,7 +153,7 @@ const parameterControls: Array<{
     key: 'jobLossPassThrough',
     label: 'How much task displacement reduces the total number of jobs?',
     term: 'Job-loss pass-through',
-    description: 'This is an extension input, not a parameter in Anthropic’s paper. After reinstatement is counted, it is the share of remaining task displacement that reduces the overall job pool. The rest is absorbed by demand and jobs created elsewhere.',
+    description: 'This is an extension input, not a parameter in Anthropic’s paper. After reinstatement is counted, it is the share of remaining task displacement that reduces the overall job pool. After 2030, the rest becomes replacement human-task demand in the wage and production equations.',
     format: (value) => `${(value * 100).toFixed(1)}%`,
     example: (value) => `At ${(value * 100).toFixed(1)}%, every 100 residual task-equivalent positions displaced by AI reduce the overall job pool by about ${Math.round(value * 100)} positions.`,
   },
@@ -204,7 +210,7 @@ function TimeTooltip({
         <span key={item.name}>
           <i style={{ background: item.color }} />
           {item.name}
-          <strong>{metric === 'gdp' ? gdpValue(item.value) : metric === 'wages' ? wageValue(item.value) : pct(item.value)}</strong>
+          <strong>{metric === 'gdp' ? gdpValue(item.value) : metric === 'wages' || metric === 'laborIncome' ? wageValue(item.value) : pct(item.value)}</strong>
         </span>
       ))}
     </div>
@@ -232,6 +238,7 @@ export default function Home() {
     baselineTotalUnemployment: baselinePath[index].totalUnemployment,
     baselineRealGdpTrillions: baselinePath[index].realGdpTrillions,
     baselineRealAnnualWage: baselinePath[index].realAnnualWage,
+    baselineLaborIncomePerParticipant: baselinePath[index].laborIncomePerParticipant,
   })), [baselinePath, scenarioPath]);
   const chartTicks = useMemo(() => {
     const ticks = [MODEL_START_YEAR];
@@ -352,9 +359,9 @@ export default function Home() {
               <strong>{scenarioName}</strong>
             </div>
             <div className="metric-tabs" aria-label="Chart outcome">
-              {(['unemployment', 'gdp', 'wages', 'shares', 'exposure'] as MetricId[]).map((item) => (
+              {(['unemployment', 'gdp', 'wages', 'laborIncome', 'shares', 'exposure'] as MetricId[]).map((item) => (
                 <button key={item} className={metric === item ? 'active' : ''} onClick={() => setMetric(item)}>
-                  {item === 'gdp' ? 'GDP' : item[0].toUpperCase() + item.slice(1)}
+                  {item === 'gdp' ? 'GDP' : item === 'laborIncome' ? 'Labor income' : item[0].toUpperCase() + item.slice(1)}
                 </button>
               ))}
             </div>
@@ -381,7 +388,7 @@ export default function Home() {
                 />
                 <YAxis
                   domain={metric === 'shares' || metric === 'exposure' ? [0, 100] : ['auto', 'auto']}
-                  tickFormatter={(value) => metric === 'gdp' || metric === 'wages'
+                  tickFormatter={(value) => metric === 'gdp' || metric === 'wages' || metric === 'laborIncome'
                     ? metric === 'gdp' ? `$${Number(value).toFixed(0)}T` : `$${Math.round(Number(value) / 1000)}k`
                     : `${Number(value).toFixed(0)}%`}
                   axisLine={false}
@@ -433,10 +440,10 @@ export default function Home() {
           <ol className="extension-list">
             <li><b>Affected task mass keeps growing.</b><span>The selected annual expansion rate carries task capability toward a maximum of 100%.</span></li>
             <li><b>Diffusion and task productivity continue smoothly.</b><span>Diffusion stays on its existing path. After 2030, task productivity continues at the same scenario-specific log growth rate used through 2030.</span></li>
-            <li><b>Workers share one labor market.</b><span>Job-loss pass-through controls how much residual task displacement reduces the total job pool after demand and jobs created elsewhere are counted. Preset values are calibrated to Anthropic&apos;s 2030 aggregate unemployment results.</span></li>
+            <li><b>Workers share one labor market.</b><span>Job-loss pass-through controls how much residual task displacement reduces the total job pool. After 2030, displacement absorbed by demand or replacement jobs also enters the production equations as human-task demand.</span></li>
             <li><b>The comparison freezes technology in mid-2026.</b><span>The dashed line holds task capability, diffusion, and AI task productivity fixed while ordinary economic growth continues.</span></li>
           </ol>
-          <p className="measurement-note"><b>How pass-through was derived.</b> Anthropic&apos;s <a href="https://www-cdn.anthropic.com/files/4zrzovbb/website/cf58f84d46a4a76bf5a5b039ac695fba6b80041c.pdf" target="_blank" rel="noreferrer">Equation 13</a> assigns employment gained by its unaffected occupation group as employment lost by its cognitive group, while holding total target employment fixed. This extension uses one labor pool and allows the technology frontier to reach all tasks, so it replaces that two-group accounting rule with job-loss pass-through. The preset values of 8.0%, 12.5%, and 31.1% are calibrated so 2030 unemployment equals Table 3&apos;s 3.9%, 4.6%, and 11.9%. They remain constant after 2030 and are calibration assumptions, not empirical estimates.</p>
+          <p className="measurement-note"><b>How pass-through was derived.</b> Anthropic&apos;s <a href="https://www-cdn.anthropic.com/files/4zrzovbb/website/cf58f84d46a4a76bf5a5b039ac695fba6b80041c.pdf" target="_blank" rel="noreferrer">Equation 13</a> assigns employment gained by its unaffected occupation group as employment lost by its cognitive group, while holding total target employment fixed. This extension uses one labor pool and allows the technology frontier to reach all tasks, so it replaces that two-group accounting rule with job-loss pass-through. The preset values of 8.0%, 12.5%, and 31.1% are calibrated so 2030 unemployment equals Table 3&apos;s 3.9%, 4.6%, and 11.9%. The paper&apos;s production equations are preserved through 2030. Beyond that boundary, the share of new displacement that does not eliminate jobs is treated as replacement human-task demand when calculating GDP, wages, and factor shares. This is a post-2030 assumption, not an empirical estimate.</p>
           <p className="measurement-note">Dollar values use 2026 reference levels: {gdpValue(REAL_GDP_2026_TRILLIONS)} of annualized U.S. GDP and {wageValue(REAL_ANNUAL_WAGE_2026)} of annual earnings for the average private-sector payroll worker.</p>
           <strong>Values after 2030 are results of this extension, not values reported by Anthropic.</strong>
         </div>

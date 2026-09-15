@@ -19,7 +19,7 @@ This gives 4% in the modest scenario, 12% in the substantial scenario, and 30% i
 The monthly sequence is:
 
 1. Evaluate logistic paths for affected task mass and diffusion, plus the smooth productivity path.
-2. Solve the paper's exact task-production block and capital-market root.
+2. Solve the paper's task-production block and capital-market root. After 2030, add replacement human-task demand for displacement that does not pass through to job loss.
 3. Calculate net human task elimination from the four technology parameters, then apply the job-loss pass-through to obtain the target reduction in total employment.
 4. Count ordinary quits toward any required employment contraction, then close a fraction of the remaining gap through layoffs.
 5. Post vacancies only for human jobs that remain in the target.
@@ -65,6 +65,8 @@ Let `N0` be the task elimination already embodied in the calibrated 2024 labor m
 
 Job-loss pass-through does not appear in the paper. The paper's Equation (13) instead makes target employment gained by its unaffected group equal target employment lost by its cognitive group, keeping total target employment fixed. Once the extension replaces those permanent groups with one labor pool, that accounting rule no longer supplies the missing jobs. Pass-through is the reduced-form share of residual task displacement that reduces the aggregate job pool after demand growth and jobs created elsewhere are counted.
 
+The paper's production equations are preserved through 2030. For incremental displacement beyond 2030, the share `1 - beta` is represented as replacement human-task demand in the production block. This makes the labor demand used to calculate wages and factor shares consistent with the jobs retained in the employment target. A smooth exponential ramp begins with zero slope at the 2030 boundary, so levels and first derivatives remain continuous.
+
 It is calibrated to the paper's 2030 unemployment result for each preset: 8.0% in modest, 12.5% in substantial, and 31.1% in extreme. These are calibration values, not empirical estimates, and remain constant through 2040. A value of zero fully absorbs displacement elsewhere; a value of one maps residual task displacement one-for-one to lost job capacity.
 
 Each month, ordinary quits count toward any decline in `E*`. If employment after quits still exceeds next month's target, the selected adjustment-speed fraction of that excess becomes layoffs. If employment is below the target, employers post only enough vacancies to fill the remaining human jobs. The paper's bounded matching function determines how many of those vacancies produce hires.
@@ -76,6 +78,8 @@ There is one unemployment stock and one vacancy market. Total unemployment combi
 GDP, real wages, and unemployment are shown against a second run of the same model. The comparison follows the selected scenario through the mid-2026 technology anchor, then holds affected task mass, diffusion, and AI task productivity fixed at those levels. Automation and reinstatement shares are already constant scenario parameters. Ordinary TFP, labor-force, ideas, capital, quit, vacancy, and matching dynamics continue.
 
 GDP and real wages are displayed in constant 2026 dollars. The GDP path is anchored to the BEA's 2026 Q2 seasonally adjusted annual rate of $32.486 trillion. The wage path is anchored to the BLS June 2026 average weekly earnings of $1,289.34 for private nonfarm payroll workers, annualized to $67,045.68. Their common trend growth is calculated from the paper's baseline calibration: real wages grow with labor-augmenting ideas at `baseline TFP growth / labor share`, and GDP also includes labor-force growth. These anchors change the units, not the relative shape or scenario comparison.
+
+Labor income per labor-force participant is the model's average annual wage multiplied by the employed share of the labor force. It assigns zero labor income to unemployed participants and excludes taxes, transfers, and capital income.
 
 ## Other extension assumptions
 
