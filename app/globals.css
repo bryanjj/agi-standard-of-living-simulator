@@ -100,6 +100,8 @@ h1 em { color:var(--orange); font-weight:normal; }
 .extension-list b { color:#f3efe5; font:17px Georgia,serif; }
 .extension-list span { color:#aeb5ab; font-size:12px; line-height:1.6; }
 .boundary-copy .measurement-note { padding:15px 17px; color:#aeb5ab; background:#2b3029; font-size:11px; }
+.boundary-copy .measurement-note b { color:#f3efe5; }
+.boundary-copy .measurement-note a { color:#e8bd77; }
 .boundary-copy>strong { display:block; padding-top:19px; border-top:1px solid #4b5148; color:#e8bd77; font:20px/1.45 Georgia,serif; }
 .boundary-section .eyebrow { color:#aeb4aa; }
 .boundary-section h2 { color:white; }

@@ -147,7 +147,7 @@ const parameterControls: Array<{
     key: 'jobLossPassThrough',
     label: 'How much task displacement reduces the total number of jobs?',
     term: 'Job-loss pass-through',
-    description: 'After reinstatement is counted, this is the share of remaining AI-displaced task mass that ultimately reduces the overall job pool. The rest is absorbed by demand and jobs created elsewhere.',
+    description: 'This is an extension input, not a parameter in Anthropic’s paper. After reinstatement is counted, it is the share of remaining task displacement that reduces the overall job pool. The rest is absorbed by demand and jobs created elsewhere.',
     format: (value) => `${(value * 100).toFixed(1)}%`,
     example: (value) => `At ${(value * 100).toFixed(1)}%, every 100 residual task-equivalent positions displaced by AI reduce the overall job pool by about ${Math.round(value * 100)} positions.`,
   },
@@ -436,6 +436,7 @@ export default function Home() {
             <li><b>Workers share one labor market.</b><span>Job-loss pass-through controls how much residual task displacement reduces the total job pool after demand and jobs created elsewhere are counted. Preset values are calibrated to Anthropic&apos;s 2030 aggregate unemployment results.</span></li>
             <li><b>The comparison freezes technology in mid-2026.</b><span>The dashed line holds task capability, diffusion, and AI task productivity fixed while ordinary economic growth continues.</span></li>
           </ol>
+          <p className="measurement-note"><b>How pass-through was derived.</b> Anthropic&apos;s <a href="https://www-cdn.anthropic.com/files/4zrzovbb/website/cf58f84d46a4a76bf5a5b039ac695fba6b80041c.pdf" target="_blank" rel="noreferrer">Equation 13</a> assigns employment gained by its unaffected occupation group as employment lost by its cognitive group, while holding total target employment fixed. This extension uses one labor pool and allows the technology frontier to reach all tasks, so it replaces that two-group accounting rule with job-loss pass-through. The preset values of 8.0%, 12.5%, and 31.1% are calibrated so 2030 unemployment equals Table 3&apos;s 3.9%, 4.6%, and 11.9%. They remain constant after 2030 and are calibration assumptions, not empirical estimates.</p>
           <p className="measurement-note">Dollar values use 2026 reference levels: {gdpValue(REAL_GDP_2026_TRILLIONS)} of annualized U.S. GDP and {wageValue(REAL_ANNUAL_WAGE_2026)} of annual earnings for the average private-sector payroll worker.</p>
           <strong>Values after 2030 are results of this extension, not values reported by Anthropic.</strong>
         </div>

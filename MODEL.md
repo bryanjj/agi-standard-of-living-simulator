@@ -63,7 +63,9 @@ Let `N0` be the task elimination already embodied in the calibrated 2024 labor m
 
 `E*(t) = E0 × [1 - beta × Delta N(t)]`
 
-Job-loss pass-through is the share of residual task displacement that reduces the aggregate job pool after demand growth and jobs created elsewhere are counted. It is calibrated to the paper's 2030 unemployment result for each preset: 8.0% in modest, 12.5% in substantial, and 31.1% in extreme. These are reduced-form calibration values, not empirical estimates. A value of zero fully absorbs displacement elsewhere; a value of one maps residual task displacement one-for-one to lost job capacity.
+Job-loss pass-through does not appear in the paper. The paper's Equation (13) instead makes target employment gained by its unaffected group equal target employment lost by its cognitive group, keeping total target employment fixed. Once the extension replaces those permanent groups with one labor pool, that accounting rule no longer supplies the missing jobs. Pass-through is the reduced-form share of residual task displacement that reduces the aggregate job pool after demand growth and jobs created elsewhere are counted.
+
+It is calibrated to the paper's 2030 unemployment result for each preset: 8.0% in modest, 12.5% in substantial, and 31.1% in extreme. These are calibration values, not empirical estimates, and remain constant through 2040. A value of zero fully absorbs displacement elsewhere; a value of one maps residual task displacement one-for-one to lost job capacity.
 
 Each month, ordinary quits count toward any decline in `E*`. If employment after quits still exceeds next month's target, the selected adjustment-speed fraction of that excess becomes layoffs. If employment is below the target, employers post only enough vacancies to fill the remaining human jobs. The paper's bounded matching function determines how many of those vacancies produce hires.
 
